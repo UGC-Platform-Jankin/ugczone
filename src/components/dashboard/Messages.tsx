@@ -181,6 +181,9 @@ const Messages = () => {
             {messages.map((msg) => {
               const isMe = msg.sender_id === user?.id;
               const sender = participants[msg.sender_id];
+              // Check for campaign invite
+              const inviteMatch = msg.content.match(/\[CAMPAIGN_INVITE:([^\]]+)\]/);
+              const displayContent = msg.content.replace(/\[CAMPAIGN_INVITE:[^\]]+\]/, "").trim();
               return (
                 <div key={msg.id} className={`flex gap-2 ${isMe ? "justify-end" : ""}`}>
                   {!isMe && (
@@ -192,7 +195,17 @@ const Messages = () => {
                   <div className={`max-w-[70%] ${isMe ? "text-right" : ""}`}>
                     {!isMe && <p className="text-xs text-muted-foreground mb-0.5">{sender?.display_name || "User"}</p>}
                     <div className={`inline-block px-3 py-2 rounded-lg text-sm ${isMe ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
-                      {msg.content}
+                      <p className="whitespace-pre-wrap">{displayContent}</p>
+                      {inviteMatch && !isMe && (
+                        <Button
+                          size="sm"
+                          variant={isMe ? "secondary" : "default"}
+                          className="mt-2 gap-1"
+                          onClick={() => navigate("/dashboard")}
+                        >
+                          View Campaign & Apply →
+                        </Button>
+                      )}
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
                       {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
