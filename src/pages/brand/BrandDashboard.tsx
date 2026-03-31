@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, LogOut, Users, Megaphone, BarChart3 } from "lucide-react";
+import { Building2, LogOut, Users, Megaphone, BarChart3, Plus } from "lucide-react";
 
 const BrandDashboard = () => {
   const { user, loading, signOut } = useAuth();
@@ -49,7 +49,7 @@ const BrandDashboard = () => {
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-primary/10 text-primary">
             <BarChart3 className="h-4 w-4" /> Overview
           </div>
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer">
+          <div onClick={() => navigate("/brand/campaigns/new")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer">
             <Megaphone className="h-4 w-4" /> Campaigns
           </div>
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer">
@@ -69,14 +69,19 @@ const BrandDashboard = () => {
 
       <main className="flex-1 overflow-auto">
         <div className="p-8">
-          <div className="flex items-center gap-4 mb-8">
-            {brandProfile.logo_url && (
-              <img src={brandProfile.logo_url} alt="Logo" className="h-12 w-12 rounded-xl object-cover border border-border" />
-            )}
-            <div>
-              <h1 className="text-2xl font-heading font-bold text-foreground">{brandProfile.business_name}</h1>
-              <p className="text-sm text-muted-foreground">{brandProfile.business_type} · {brandProfile.country}</p>
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              {brandProfile.logo_url && (
+                <img src={brandProfile.logo_url} alt="Logo" className="h-12 w-12 rounded-xl object-cover border border-border" />
+              )}
+              <div>
+                <h1 className="text-2xl font-heading font-bold text-foreground">{brandProfile.business_name}</h1>
+                <p className="text-sm text-muted-foreground">{brandProfile.business_type} · {brandProfile.country}</p>
+              </div>
             </div>
+            <Button onClick={() => navigate("/brand/campaigns/new")} className="gap-2">
+              <Plus className="h-4 w-4" /> Create Campaign
+            </Button>
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">

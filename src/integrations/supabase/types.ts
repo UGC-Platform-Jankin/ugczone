@@ -69,8 +69,11 @@ export type Database = {
           created_at: string
           deadline: string | null
           description: string | null
+          expected_video_count: number
           id: string
+          is_free_product: boolean
           platform: string | null
+          price_per_video: number | null
           requirements: string | null
           status: string
           title: string
@@ -82,8 +85,11 @@ export type Database = {
           created_at?: string
           deadline?: string | null
           description?: string | null
+          expected_video_count?: number
           id?: string
+          is_free_product?: boolean
           platform?: string | null
+          price_per_video?: number | null
           requirements?: string | null
           status?: string
           title: string
@@ -95,8 +101,11 @@ export type Database = {
           created_at?: string
           deadline?: string | null
           description?: string | null
+          expected_video_count?: number
           id?: string
+          is_free_product?: boolean
           platform?: string | null
+          price_per_video?: number | null
           requirements?: string | null
           status?: string
           title?: string
