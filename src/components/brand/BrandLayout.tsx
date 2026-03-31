@@ -3,7 +3,7 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Building2, LogOut, Users, Megaphone, BarChart3, User, MessageCircle } from "lucide-react";
+import { Building2, LogOut, Users, Megaphone, BarChart3, User, MessageCircle, Video, Link2 } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
