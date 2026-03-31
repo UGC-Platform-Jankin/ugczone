@@ -317,26 +317,28 @@ const Messages = () => {
             <Button variant="ghost" size="icon" className="md:hidden shrink-0 h-8 w-8" onClick={() => setSelectedRoom(null)}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            {roomMeta[selectedRoom.id]?.isGroup ? (
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Users className="h-4 w-4 text-primary" />
+            <button className="flex items-center gap-3 min-w-0 flex-1 text-left hover:opacity-80 transition-opacity" onClick={() => setProfileOpen(true)}>
+              {roomMeta[selectedRoom.id]?.isGroup ? (
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Users className="h-4 w-4 text-primary" />
+                </div>
+              ) : (
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarImage src={roomMeta[selectedRoom.id]?.avatarUrl || undefined} />
+                  <AvatarFallback className="bg-secondary text-sm">
+                    {(roomMeta[selectedRoom.id]?.displayName || "?").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              <div className="min-w-0">
+                <p className="font-medium text-sm text-foreground truncate">
+                  {roomMeta[selectedRoom.id]?.displayName || "Chat"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {roomMeta[selectedRoom.id]?.isGroup ? `${Object.keys(participants).length} members · Tap to view` : "Tap to view profile"}
+                </p>
               </div>
-            ) : (
-              <Avatar className="h-10 w-10 shrink-0">
-                <AvatarImage src={roomMeta[selectedRoom.id]?.avatarUrl || undefined} />
-                <AvatarFallback className="bg-secondary text-sm">
-                  {(roomMeta[selectedRoom.id]?.displayName || "?").charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            )}
-            <div className="min-w-0">
-              <p className="font-medium text-sm text-foreground truncate">
-                {roomMeta[selectedRoom.id]?.displayName || "Chat"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {roomMeta[selectedRoom.id]?.isGroup ? `${Object.keys(participants).length} members · Campaign group` : "Direct message"}
-              </p>
-            </div>
+            </button>
           </div>
 
           {/* Messages area */}
