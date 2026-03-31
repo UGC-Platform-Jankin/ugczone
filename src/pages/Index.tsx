@@ -4,7 +4,6 @@ import HowItWorks from "@/components/landing/HowItWorks";
 import Features from "@/components/landing/Features";
 import OurBrands from "@/components/landing/OurBrands";
 import CreatorSpotlight from "@/components/landing/CreatorSpotlight";
-import About from "@/components/landing/About";
 import Contact from "@/components/landing/Contact";
 import BrandCTA from "@/components/landing/BrandCTA";
 import CTA from "@/components/landing/CTA";
@@ -19,7 +18,6 @@ const Index = () => {
       <Features />
       <OurBrands />
       <CreatorSpotlight />
-      <About />
       <Contact />
       <BrandCTA />
       <CTA />
