@@ -74,7 +74,12 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
       </aside>
       <main className="flex-1 overflow-auto">
-        <div className="p-8">{children}</div>
+        <div className="p-8">
+          <div className="flex justify-end mb-4">
+            <NotificationBell />
+          </div>
+          {children}
+        </div>
       </main>
     </div>
   );
