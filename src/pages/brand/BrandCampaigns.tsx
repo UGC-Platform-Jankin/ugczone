@@ -102,6 +102,14 @@ const BrandCampaigns = () => {
     }
 
     setApplications((prev) => prev.map((a) => a.id === appId ? { ...a, status } : a));
+    // Notify creator
+    await supabase.from("notifications" as any).insert({
+      user_id: app.creator_user_id,
+      type: "application_update",
+      title: status === "accepted" ? "Application Accepted!" : "Application Update",
+      body: status === "accepted" ? `You've been accepted to "${selectedCampaign.title}"` : `Your application to "${selectedCampaign.title}" was not selected.`,
+      link: status === "accepted" ? "/dashboard/messages" : "/dashboard",
+    } as any);
     toast({ title: status === "accepted" ? "Creator accepted!" : "Application rejected" });
     setUpdatingApp(null);
   };
