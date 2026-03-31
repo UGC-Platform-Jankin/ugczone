@@ -19,6 +19,7 @@ import BrandDashboard from "./pages/brand/BrandDashboard.tsx";
 import CreateCampaign from "./pages/brand/CreateCampaign.tsx";
 import BrandProfileContent from "./pages/brand/BrandProfile.tsx";
 import BrandCampaigns from "./pages/brand/BrandCampaigns.tsx";
+import FindCreators from "./pages/brand/FindCreators.tsx";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/brand/campaigns" element={<BrandLayout><BrandCampaigns /></BrandLayout>} />
             <Route path="/brand/campaigns/new" element={<CreateCampaign />} />
             <Route path="/brand/messages" element={<BrandLayout><Messages /></BrandLayout>} />
+            <Route path="/brand/creators" element={<BrandLayout><FindCreators /></BrandLayout>} />
             <Route path="/brand/profile" element={<BrandLayout><BrandProfileContent /></BrandLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

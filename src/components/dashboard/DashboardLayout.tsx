@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Briefcase, User, LogOut, MessageCircle } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
 
 
 const navItems = [
@@ -72,7 +73,12 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
-        <div className="p-8">{children}</div>
+        <div className="p-8">
+          <div className="flex justify-end mb-4">
+            <NotificationBell />
+          </div>
+          {children}
+        </div>
       </main>
     </div>
   );

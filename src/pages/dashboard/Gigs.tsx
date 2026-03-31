@@ -73,6 +73,14 @@ const Gigs = () => {
     }
 
     setAppliedCampaigns((prev) => new Set([...prev, applyingTo.id]));
+    // Notify brand
+    await supabase.from("notifications" as any).insert({
+      user_id: applyingTo.brand_user_id,
+      type: "application",
+      title: "New Application",
+      body: `A creator applied to "${applyingTo.title}"`,
+      link: "/brand/campaigns",
+    } as any);
     toast({ title: "Application sent!", description: "The brand will review your application." });
     setApplyingTo(null);
     setCoverLetter("");

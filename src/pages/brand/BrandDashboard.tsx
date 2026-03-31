@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "react-router-dom";
 import { Building2, LogOut, Users, Megaphone, BarChart3, Plus, User, MessageCircle } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
 
 const BrandDashboard = () => {
   const { user, loading, signOut } = useAuth();
@@ -56,9 +57,9 @@ const BrandDashboard = () => {
           <Link to="/brand/messages" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
             <MessageCircle className="h-4 w-4" /> Messages
           </Link>
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer">
+          <Link to="/brand/creators" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
             <Users className="h-4 w-4" /> Find Creators
-          </div>
+          </Link>
           <Link to="/brand/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
             <User className="h-4 w-4" /> Profile
           </Link>
@@ -76,6 +77,9 @@ const BrandDashboard = () => {
 
       <main className="flex-1 overflow-auto">
         <div className="p-8">
+          <div className="flex justify-end mb-4">
+            <NotificationBell />
+          </div>
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
               {brandProfile.logo_url && (

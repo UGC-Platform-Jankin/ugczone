@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Building2, LogOut, Users, Megaphone, BarChart3, User, MessageCircle } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
 
 const navItems = [
   { label: "Overview", icon: BarChart3, path: "/brand/dashboard" },
   { label: "Campaigns", icon: Megaphone, path: "/brand/campaigns" },
   { label: "Messages", icon: MessageCircle, path: "/brand/messages" },
-  { label: "Find Creators", icon: Users, path: "/brand/dashboard" },
+  { label: "Find Creators", icon: Users, path: "/brand/creators" },
   { label: "Profile", icon: User, path: "/brand/profile" },
 ];
 
@@ -73,7 +74,12 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
       </aside>
       <main className="flex-1 overflow-auto">
-        <div className="p-8">{children}</div>
+        <div className="p-8">
+          <div className="flex justify-end mb-4">
+            <NotificationBell />
+          </div>
+          {children}
+        </div>
       </main>
     </div>
   );
