@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageCircle, Send, Loader2, ArrowLeft, Users } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import ChatProfilePanel from "./ChatProfilePanel";
 
 interface ChatRoom {
   id: string;
@@ -46,7 +47,7 @@ const Messages = () => {
   const [sending, setSending] = useState(false);
   const [participants, setParticipants] = useState<Record<string, any>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+  const [profileOpen, setProfileOpen] = useState(false);
   // Fetch rooms + metadata (other user name for private chats, last message)
   useEffect(() => {
     if (!user) return;
@@ -316,26 +317,28 @@ const Messages = () => {
             <Button variant="ghost" size="icon" className="md:hidden shrink-0 h-8 w-8" onClick={() => setSelectedRoom(null)}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            {roomMeta[selectedRoom.id]?.isGroup ? (
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Users className="h-4 w-4 text-primary" />
+            <button className="flex items-center gap-3 min-w-0 flex-1 text-left hover:opacity-80 transition-opacity" onClick={() => setProfileOpen(true)}>
+              {roomMeta[selectedRoom.id]?.isGroup ? (
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Users className="h-4 w-4 text-primary" />
+                </div>
+              ) : (
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarImage src={roomMeta[selectedRoom.id]?.avatarUrl || undefined} />
+                  <AvatarFallback className="bg-secondary text-sm">
+                    {(roomMeta[selectedRoom.id]?.displayName || "?").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              <div className="min-w-0">
+                <p className="font-medium text-sm text-foreground truncate">
+                  {roomMeta[selectedRoom.id]?.displayName || "Chat"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {roomMeta[selectedRoom.id]?.isGroup ? `${Object.keys(participants).length} members · Tap to view` : "Tap to view profile"}
+                </p>
               </div>
-            ) : (
-              <Avatar className="h-10 w-10 shrink-0">
-                <AvatarImage src={roomMeta[selectedRoom.id]?.avatarUrl || undefined} />
-                <AvatarFallback className="bg-secondary text-sm">
-                  {(roomMeta[selectedRoom.id]?.displayName || "?").charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            )}
-            <div className="min-w-0">
-              <p className="font-medium text-sm text-foreground truncate">
-                {roomMeta[selectedRoom.id]?.displayName || "Chat"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {roomMeta[selectedRoom.id]?.isGroup ? `${Object.keys(participants).length} members · Campaign group` : "Direct message"}
-              </p>
-            </div>
+            </button>
           </div>
 
           {/* Messages area */}
@@ -432,6 +435,16 @@ const Messages = () => {
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
+          {selectedRoom && (
+            <ChatProfilePanel
+              open={profileOpen}
+              onOpenChange={setProfileOpen}
+              roomType={selectedRoom.type as "private" | "group"}
+              roomId={selectedRoom.id}
+              currentUserId={user!.id}
+              campaignId={selectedRoom.campaign_id}
+            />
+          )}
         </div>
       ) : (
         <div className="flex-1 hidden md:flex flex-col items-center justify-center text-muted-foreground">
