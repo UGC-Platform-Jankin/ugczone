@@ -15,6 +15,7 @@ import ProfileSetup from "./pages/dashboard/ProfileSetup.tsx";
 import BrandSetup from "./pages/brand/BrandSetup.tsx";
 import BrandDashboard from "./pages/brand/BrandDashboard.tsx";
 import CreateCampaign from "./pages/brand/CreateCampaign.tsx";
+import BrandProfile from "./pages/brand/BrandProfile.tsx";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/brand/setup" element={<BrandSetup />} />
             <Route path="/brand/dashboard" element={<BrandDashboard />} />
             <Route path="/brand/campaigns/new" element={<CreateCampaign />} />
+            <Route path="/brand/profile" element={<BrandProfile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
