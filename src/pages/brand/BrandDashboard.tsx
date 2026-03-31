@@ -49,7 +49,7 @@ const BrandDashboard = () => {
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-primary/10 text-primary">
             <BarChart3 className="h-4 w-4" /> Overview
           </div>
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer">
+          <div onClick={() => navigate("/brand/campaigns/new")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer">
             <Megaphone className="h-4 w-4" /> Campaigns
           </div>
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer">
