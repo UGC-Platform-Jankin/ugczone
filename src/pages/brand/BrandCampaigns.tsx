@@ -16,6 +16,7 @@ const platformIcons: Record<string, any> = { instagram: Instagram, facebook: Fac
 const BrandCampaigns = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
@@ -30,8 +31,20 @@ const BrandCampaigns = () => {
   useEffect(() => {
     if (!user) return;
     supabase.from("campaigns").select("*").eq("brand_user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => {
-      setCampaigns((data as any) || []);
+      const allCampaigns = (data as any) || [];
+      setCampaigns(allCampaigns);
       setLoading(false);
+      // Auto-open campaign from navigation state
+      const state = location.state as any;
+      if (state?.openCampaignId) {
+        const target = allCampaigns.find((c: any) => c.id === state.openCampaignId);
+        if (target) {
+          setSelectedCampaign(target);
+          loadApplications(target.id);
+        }
+        // Clear the state so it doesn't re-trigger
+        window.history.replaceState({}, "");
+      }
     });
   }, [user]);
 
