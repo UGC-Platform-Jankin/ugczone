@@ -113,6 +113,7 @@ const CreateCampaign = () => {
       campaign_length_days: campaignLengthDays ? Number(campaignLengthDays) : null,
       requirements: requirements || null,
       target_regions: selectedRegions,
+      max_creators: Number(maxCreators) || 10,
     } as any);
     setSubmitting(false);
 
