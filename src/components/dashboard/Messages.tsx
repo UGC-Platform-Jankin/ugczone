@@ -89,17 +89,29 @@ const Messages = () => {
             .select("user_id")
             .eq("chat_room_id", room.id);
           const otherUserId = parts?.find((p: any) => p.user_id !== user.id)?.user_id;
-          let displayName = "Chat";
+          let displayName = room.name || "Direct Message";
           let avatarUrl: string | null = null;
           if (otherUserId) {
+            // Try creator profile first
             const { data: profile } = await supabase
               .from("profiles")
               .select("display_name, username, avatar_url")
               .eq("user_id", otherUserId)
               .maybeSingle();
-            if (profile) {
-              displayName = profile.display_name || profile.username || "User";
+            if (profile?.display_name || profile?.username) {
+              displayName = profile.display_name || profile.username || displayName;
               avatarUrl = profile.avatar_url;
+            } else {
+              // Try brand profile
+              const { data: brand } = await supabase
+                .from("brand_profiles")
+                .select("business_name, logo_url")
+                .eq("user_id", otherUserId)
+                .maybeSingle();
+              if (brand) {
+                displayName = brand.business_name || displayName;
+                avatarUrl = brand.logo_url;
+              }
             }
           }
           meta[room.id] = {
@@ -215,12 +227,12 @@ const Messages = () => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-[calc(100vh-12rem)]"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return <div className="flex items-center justify-center h-[calc(100vh-5rem)]"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
   if (rooms.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] text-center">
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-5rem)] text-center">
         <div className="h-20 w-20 rounded-full bg-secondary flex items-center justify-center mb-4">
           <MessageCircle className="h-10 w-10 text-muted-foreground" />
         </div>
@@ -233,7 +245,7 @@ const Messages = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] border border-border/50 rounded-xl overflow-hidden bg-card/30">
+    <div className="flex h-[calc(100vh-5rem)] border border-border/50 rounded-xl overflow-hidden bg-card/30">
       {/* Conversation List - left sidebar */}
       <div className={cn(
         "w-80 border-r border-border/50 flex flex-col bg-card/50",
@@ -257,11 +269,11 @@ const Messages = () => {
                 )}
               >
                 {meta.isGroup ? (
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0 ring-2 ring-primary/20">
                     <Users className="h-5 w-5 text-primary" />
                   </div>
                 ) : (
-                  <Avatar className="h-12 w-12 shrink-0">
+                  <Avatar className="h-12 w-12 shrink-0 ring-2 ring-border/30">
                     <AvatarImage src={meta.avatarUrl || undefined} />
                     <AvatarFallback className="bg-secondary text-sm font-medium">
                       {meta.displayName.charAt(0).toUpperCase()}
@@ -270,7 +282,12 @@ const Messages = () => {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm text-foreground truncate">{meta.displayName}</p>
+                    <p className="font-medium text-sm text-foreground truncate flex items-center gap-1.5">
+                      {meta.displayName}
+                      {meta.isGroup && (
+                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-normal">Group</span>
+                      )}
+                    </p>
                     <span className="text-[11px] text-muted-foreground shrink-0 ml-2">
                       {formatTime(meta.lastMessageTime)}
                     </span>
@@ -308,7 +325,7 @@ const Messages = () => {
                 {roomMeta[selectedRoom.id]?.displayName || "Chat"}
               </p>
               <p className="text-xs text-muted-foreground">
-                {roomMeta[selectedRoom.id]?.isGroup ? "Campaign group" : "Direct message"}
+                {roomMeta[selectedRoom.id]?.isGroup ? `${Object.keys(participants).length} members · Campaign group` : "Direct message"}
               </p>
             </div>
           </div>
