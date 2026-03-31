@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Briefcase, User, LogOut, MessageCircle, Shield } from "lucide-react";
+import { Briefcase, User, LogOut, MessageCircle, Shield, Video, Link2 } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import { supabase } from "@/integrations/supabase/client";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
@@ -16,6 +16,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
   const navItems = [
     { label: "Gigs", icon: Briefcase, path: "/dashboard", badge: 0 },
+    { label: "Videos", icon: Video, path: "/dashboard/videos", badge: 0 },
+    { label: "Posted Videos", icon: Link2, path: "/dashboard/posted-videos", badge: 0 },
     { label: "Messages", icon: MessageCircle, path: "/dashboard/messages", badge: unread.total },
     { label: "Profile", icon: User, path: "/dashboard/profile", badge: 0 },
   ];

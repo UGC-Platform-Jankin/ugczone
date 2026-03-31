@@ -3,7 +3,7 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Building2, LogOut, Users, Megaphone, BarChart3, User, MessageCircle } from "lucide-react";
+import { Building2, LogOut, Users, Megaphone, BarChart3, User, MessageCircle, Video, Link2 } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
@@ -17,6 +17,8 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
   const navItems = [
     { label: "Overview", icon: BarChart3, path: "/brand/dashboard", badge: 0 },
     { label: "Campaigns", icon: Megaphone, path: "/brand/campaigns", badge: 0 },
+    { label: "Video Review", icon: Video, path: "/brand/video-review", badge: 0 },
+    { label: "Posted Videos", icon: Link2, path: "/brand/posted-videos", badge: 0 },
     { label: "Messages", icon: MessageCircle, path: "/brand/messages", badge: unread.total },
     { label: "Find Creators", icon: Users, path: "/brand/creators", badge: 0 },
     { label: "Profile", icon: User, path: "/brand/profile", badge: 0 },
