@@ -41,8 +41,8 @@ const BrandCampaigns = () => {
     const creatorIds = [...new Set(apps.map((a: any) => a.creator_user_id))];
     if (creatorIds.length > 0) {
       const [profilesRes, socialsRes] = await Promise.all([
-        supabase.from("profiles").select("*").in("user_id", creatorIds),
-        supabase.from("social_connections").select("*").in("user_id", creatorIds),
+        supabase.from("profiles").select("*").in("user_id", creatorIds as string[]),
+        supabase.from("social_connections").select("*").in("user_id", creatorIds as string[]),
       ]);
       const profilesMap: Record<string, any> = {};
       (profilesRes.data || []).forEach((p: any) => { profilesMap[p.user_id] = p; });
