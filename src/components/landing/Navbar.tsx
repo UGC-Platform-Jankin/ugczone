@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const Navbar = () => {
   return (
@@ -21,11 +22,11 @@ const Navbar = () => {
           <a href="#contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</a>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-            Log in
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
+            <Link to="/auth">Log in</Link>
           </Button>
-          <Button size="sm" className="bg-gradient-coral text-primary-foreground hover:opacity-90 transition-opacity">
-            Get Started
+          <Button size="sm" className="bg-gradient-coral text-primary-foreground hover:opacity-90 transition-opacity" asChild>
+            <Link to="/auth">Get Started</Link>
           </Button>
         </div>
       </div>
