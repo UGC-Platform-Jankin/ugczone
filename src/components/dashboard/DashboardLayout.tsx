@@ -79,6 +79,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               Admin
             </Link>
           )}
+        </nav>
         <div className="p-4 border-t border-border/50">
           <Button
             variant="ghost"
