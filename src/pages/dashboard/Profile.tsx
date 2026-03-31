@@ -83,6 +83,7 @@ const Profile = () => {
         setSocialForms(newForms);
         setSocialIds(newIds);
       }
+      setCollaborations((collabsRes.data as any) || []);
       setLoading(false);
     };
     fetchData();
