@@ -7,10 +7,38 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Loader2, Instagram, Facebook, Video } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const platformOptions = [
+  { value: "instagram", label: "Instagram", icon: Instagram, color: "text-pink-400" },
+  { value: "facebook", label: "Facebook", icon: Facebook, color: "text-blue-400" },
+  { value: "tiktok", label: "TikTok", icon: Video, color: "text-cyan-400" },
+];
+
+const regionOptions = [
+  { value: "Worldwide", label: "🌍 Worldwide" },
+  { value: "Hong Kong", label: "🇭🇰 Hong Kong" },
+  { value: "United Kingdom", label: "🇬🇧 United Kingdom" },
+  { value: "United States", label: "🇺🇸 United States" },
+  { value: "Singapore", label: "🇸🇬 Singapore" },
+  { value: "Australia", label: "🇦🇺 Australia" },
+  { value: "Canada", label: "🇨🇦 Canada" },
+  { value: "Japan", label: "🇯🇵 Japan" },
+  { value: "South Korea", label: "🇰🇷 South Korea" },
+  { value: "Malaysia", label: "🇲🇾 Malaysia" },
+  { value: "Thailand", label: "🇹🇭 Thailand" },
+  { value: "Philippines", label: "🇵🇭 Philippines" },
+  { value: "Indonesia", label: "🇮🇩 Indonesia" },
+  { value: "Vietnam", label: "🇻🇳 Vietnam" },
+  { value: "Taiwan", label: "🇹🇼 Taiwan" },
+  { value: "China", label: "🇨🇳 China" },
+  { value: "India", label: "🇮🇳 India" },
+  { value: "Germany", label: "🇩🇪 Germany" },
+  { value: "France", label: "🇫🇷 France" },
+];
 
 const CreateCampaign = () => {
   const { user, loading: authLoading } = useAuth();
@@ -19,13 +47,13 @@ const CreateCampaign = () => {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [platform, setPlatform] = useState("");
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [isFreeProduct, setIsFreeProduct] = useState(false);
   const [pricePerVideo, setPricePerVideo] = useState("");
   const [expectedVideoCount, setExpectedVideoCount] = useState("1");
-  const [deadline, setDeadline] = useState("");
+  const [campaignLengthDays, setCampaignLengthDays] = useState("");
   const [requirements, setRequirements] = useState("");
-  const [targetRegion, setTargetRegion] = useState("Worldwide");
+  const [selectedRegions, setSelectedRegions] = useState<string[]>(["Worldwide"]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -35,11 +63,36 @@ const CreateCampaign = () => {
   const descCharCount = description.length;
   const isDescValid = descCharCount >= 500;
 
+  const togglePlatform = (platform: string) => {
+    setSelectedPlatforms((prev) =>
+      prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
+    );
+  };
+
+  const toggleRegion = (region: string) => {
+    if (region === "Worldwide") {
+      setSelectedRegions(["Worldwide"]);
+      return;
+    }
+    setSelectedRegions((prev) => {
+      const without = prev.filter((r) => r !== "Worldwide");
+      if (prev.includes(region)) {
+        const result = without.filter((r) => r !== region);
+        return result.length === 0 ? ["Worldwide"] : result;
+      }
+      return [...without, region];
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     if (!isDescValid) {
       toast({ title: "Description too short", description: `Minimum 500 characters required (${descCharCount}/500).`, variant: "destructive" });
+      return;
+    }
+    if (selectedPlatforms.length === 0) {
+      toast({ title: "Select at least one platform", variant: "destructive" });
       return;
     }
     if (!isFreeProduct && (!pricePerVideo || Number(pricePerVideo) <= 0)) {
@@ -52,13 +105,13 @@ const CreateCampaign = () => {
       brand_user_id: user.id,
       title,
       description,
-      platform: platform || null,
+      platforms: selectedPlatforms,
       is_free_product: isFreeProduct,
       price_per_video: isFreeProduct ? null : Number(pricePerVideo),
       expected_video_count: Number(expectedVideoCount),
-      deadline: deadline ? new Date(deadline).toISOString() : null,
+      campaign_length_days: campaignLengthDays ? Number(campaignLengthDays) : null,
       requirements: requirements || null,
-      target_region: targetRegion,
+      target_regions: selectedRegions,
     } as any);
     setSubmitting(false);
 
@@ -114,19 +167,29 @@ const CreateCampaign = () => {
                 </p>
               </div>
 
-              {/* Platform */}
-              <div className="space-y-2">
-                <Label>Platform</Label>
-                <Select value={platform} onValueChange={setPlatform}>
-                  <SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="instagram">Instagram</SelectItem>
-                    <SelectItem value="tiktok">TikTok</SelectItem>
-                    <SelectItem value="youtube">YouTube</SelectItem>
-                    <SelectItem value="facebook">Facebook</SelectItem>
-                    <SelectItem value="any">Any Platform</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Platforms (multi-select) */}
+              <div className="space-y-3">
+                <Label>Platforms * <span className="text-xs text-muted-foreground">(select all that apply)</span></Label>
+                <div className="flex flex-wrap gap-3">
+                  {platformOptions.map(({ value, label, icon: Icon, color }) => {
+                    const selected = selectedPlatforms.includes(value);
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => togglePlatform(value)}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                          selected
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-secondary/50 text-muted-foreground hover:border-primary/50"
+                        }`}
+                      >
+                        <Icon className={`h-4 w-4 ${selected ? color : ""}`} />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Compensation */}
@@ -147,33 +210,30 @@ const CreateCampaign = () => {
                 )}
               </div>
 
-              {/* Target Region */}
-              <div className="space-y-2">
-                <Label>Target Creator Region *</Label>
-                <Select value={targetRegion} onValueChange={setTargetRegion}>
-                  <SelectTrigger><SelectValue placeholder="Select region" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Worldwide">🌍 Worldwide</SelectItem>
-                    <SelectItem value="Hong Kong">🇭🇰 Hong Kong</SelectItem>
-                    <SelectItem value="United Kingdom">🇬🇧 United Kingdom</SelectItem>
-                    <SelectItem value="United States">🇺🇸 United States</SelectItem>
-                    <SelectItem value="Singapore">🇸🇬 Singapore</SelectItem>
-                    <SelectItem value="Australia">🇦🇺 Australia</SelectItem>
-                    <SelectItem value="Canada">🇨🇦 Canada</SelectItem>
-                    <SelectItem value="Japan">🇯🇵 Japan</SelectItem>
-                    <SelectItem value="South Korea">🇰🇷 South Korea</SelectItem>
-                    <SelectItem value="Malaysia">🇲🇾 Malaysia</SelectItem>
-                    <SelectItem value="Thailand">🇹🇭 Thailand</SelectItem>
-                    <SelectItem value="Philippines">🇵🇭 Philippines</SelectItem>
-                    <SelectItem value="Indonesia">🇮🇩 Indonesia</SelectItem>
-                    <SelectItem value="Vietnam">🇻🇳 Vietnam</SelectItem>
-                    <SelectItem value="Taiwan">🇹🇼 Taiwan</SelectItem>
-                    <SelectItem value="China">🇨🇳 China</SelectItem>
-                    <SelectItem value="India">🇮🇳 India</SelectItem>
-                    <SelectItem value="Germany">🇩🇪 Germany</SelectItem>
-                    <SelectItem value="France">🇫🇷 France</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Target Regions (multi-select) */}
+              <div className="space-y-3">
+                <Label>Target Creator Regions *</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[240px] overflow-y-auto p-1">
+                  {regionOptions.map(({ value, label }) => {
+                    const selected = selectedRegions.includes(value);
+                    const isWorldwide = value === "Worldwide";
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => toggleRegion(value)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all text-left ${
+                          selected
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-secondary/50 text-muted-foreground hover:border-primary/50"
+                        } ${isWorldwide ? "col-span-2 sm:col-span-3" : ""}`}
+                      >
+                        <Checkbox checked={selected} className="pointer-events-none h-3.5 w-3.5" />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Expected Videos */}
@@ -182,10 +242,10 @@ const CreateCampaign = () => {
                 <Input id="videoCount" type="number" min="1" max="100" value={expectedVideoCount} onChange={(e) => setExpectedVideoCount(e.target.value)} required />
               </div>
 
-              {/* Deadline */}
+              {/* Campaign Length */}
               <div className="space-y-2">
-                <Label htmlFor="deadline">Deadline</Label>
-                <Input id="deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} min={new Date().toISOString().split("T")[0]} />
+                <Label htmlFor="campaignLength">Campaign Length (days)</Label>
+                <Input id="campaignLength" type="number" min="1" max="365" placeholder="e.g. 30" value={campaignLengthDays} onChange={(e) => setCampaignLengthDays(e.target.value)} />
               </div>
 
               {/* Requirements */}
@@ -194,7 +254,7 @@ const CreateCampaign = () => {
                 <Textarea id="requirements" placeholder="e.g. Must have 1000+ followers, based in Hong Kong, etc." value={requirements} onChange={(e) => setRequirements(e.target.value)} />
               </div>
 
-              <Button type="submit" className="w-full" disabled={submitting || !title || !isDescValid}>
+              <Button type="submit" className="w-full" disabled={submitting || !title || !isDescValid || selectedPlatforms.length === 0}>
                 {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Creating...</> : "Post Campaign"}
               </Button>
             </form>

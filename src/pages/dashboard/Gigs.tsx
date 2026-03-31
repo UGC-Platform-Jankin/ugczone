@@ -2,16 +2,19 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, Calendar, DollarSign } from "lucide-react";
+import { Briefcase, Clock, DollarSign } from "lucide-react";
 
 interface Campaign {
   id: string;
   title: string;
   description: string | null;
   budget: number | null;
-  platform: string | null;
-  deadline: string | null;
+  platforms: string[] | null;
+  campaign_length_days: number | null;
   status: string;
+  price_per_video: number | null;
+  is_free_product: boolean;
+  target_regions: string[] | null;
 }
 
 const Gigs = () => {
@@ -25,7 +28,7 @@ const Gigs = () => {
         .select("*")
         .eq("status", "active")
         .order("created_at", { ascending: false });
-      setCampaigns(data || []);
+      setCampaigns((data as any) || []);
       setLoading(false);
     };
     fetchCampaigns();
@@ -65,24 +68,30 @@ const Gigs = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{campaign.title}</CardTitle>
-                  {campaign.platform && (
-                    <Badge variant="secondary" className="capitalize">{campaign.platform}</Badge>
-                  )}
                 </div>
+                {campaign.platforms && campaign.platforms.length > 0 && (
+                  <div className="flex gap-1 flex-wrap">
+                    {campaign.platforms.map((p) => (
+                      <Badge key={p} variant="secondary" className="capitalize text-xs">{p}</Badge>
+                    ))}
+                  </div>
+                )}
                 <CardDescription className="line-clamp-2">{campaign.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  {campaign.budget && (
+                  {campaign.is_free_product ? (
+                    <Badge variant="outline" className="text-xs">Free Product</Badge>
+                  ) : campaign.price_per_video ? (
                     <div className="flex items-center gap-1">
                       <DollarSign className="h-3.5 w-3.5" />
-                      <span>£{campaign.budget}</span>
+                      <span>HK${campaign.price_per_video}/video</span>
                     </div>
-                  )}
-                  {campaign.deadline && (
+                  ) : null}
+                  {campaign.campaign_length_days && (
                     <div className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>{new Date(campaign.deadline).toLocaleDateString()}</span>
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{campaign.campaign_length_days}d</span>
                     </div>
                   )}
                 </div>
