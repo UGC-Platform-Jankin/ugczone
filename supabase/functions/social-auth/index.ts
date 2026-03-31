@@ -59,7 +59,7 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      const scopes = "public_profile,pages_show_list,pages_read_engagement";
+      const scopes = "public_profile,email";
       authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=${scopes}&state=${state}&response_type=code`;
     } else if (platform === "tiktok") {
       const tiktokClientKey = Deno.env.get("TIKTOK_CLIENT_KEY");
