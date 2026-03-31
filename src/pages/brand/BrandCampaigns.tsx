@@ -36,7 +36,27 @@ const BrandCampaigns = () => {
   const loadApplications = async (campaignId: string) => {
     setLoadingApps(true);
     const { data } = await supabase.from("campaign_applications").select("*").eq("campaign_id", campaignId).order("created_at", { ascending: false });
-    setApplications((data as any) || []);
+    const apps = (data as any) || [];
+    // Fetch creator profiles and socials for all applications
+    const creatorIds = [...new Set(apps.map((a: any) => a.creator_user_id))];
+    if (creatorIds.length > 0) {
+      const [profilesRes, socialsRes] = await Promise.all([
+        supabase.from("profiles").select("*").in("user_id", creatorIds),
+        supabase.from("social_connections").select("*").in("user_id", creatorIds),
+      ]);
+      const profilesMap: Record<string, any> = {};
+      (profilesRes.data || []).forEach((p: any) => { profilesMap[p.user_id] = p; });
+      const socialsMap: Record<string, any[]> = {};
+      (socialsRes.data || []).forEach((s: any) => {
+        if (!socialsMap[s.user_id]) socialsMap[s.user_id] = [];
+        socialsMap[s.user_id].push(s);
+      });
+      apps.forEach((a: any) => {
+        a._profile = profilesMap[a.creator_user_id] || null;
+        a._socials = socialsMap[a.creator_user_id] || [];
+      });
+    }
+    setApplications(apps);
     setLoadingApps(false);
   };
 
