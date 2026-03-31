@@ -184,6 +184,11 @@ const Messages = () => {
       }
 
       fetchedRooms.sort((a: ChatRoom, b: ChatRoom) => {
+        const unreadA = meta[a.id]?.unreadCount || 0;
+        const unreadB = meta[b.id]?.unreadCount || 0;
+        // Unread chats first, then by last message time
+        if (unreadA > 0 && unreadB === 0) return -1;
+        if (unreadB > 0 && unreadA === 0) return 1;
         const timeA = new Date(meta[a.id]?.lastMessageTime || a.created_at).getTime();
         const timeB = new Date(meta[b.id]?.lastMessageTime || b.created_at).getTime();
         return timeB - timeA;
