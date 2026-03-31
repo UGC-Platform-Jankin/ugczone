@@ -325,7 +325,7 @@ const Messages = () => {
                 {roomMeta[selectedRoom.id]?.displayName || "Chat"}
               </p>
               <p className="text-xs text-muted-foreground">
-                {roomMeta[selectedRoom.id]?.isGroup ? "Campaign group" : "Direct message"}
+                {roomMeta[selectedRoom.id]?.isGroup ? `${Object.keys(participants).length} members · Campaign group` : "Direct message"}
               </p>
             </div>
           </div>
