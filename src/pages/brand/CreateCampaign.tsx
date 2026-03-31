@@ -147,6 +147,35 @@ const CreateCampaign = () => {
                 )}
               </div>
 
+              {/* Target Region */}
+              <div className="space-y-2">
+                <Label>Target Creator Region *</Label>
+                <Select value={targetRegion} onValueChange={setTargetRegion}>
+                  <SelectTrigger><SelectValue placeholder="Select region" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Worldwide">🌍 Worldwide</SelectItem>
+                    <SelectItem value="Hong Kong">🇭🇰 Hong Kong</SelectItem>
+                    <SelectItem value="United Kingdom">🇬🇧 United Kingdom</SelectItem>
+                    <SelectItem value="United States">🇺🇸 United States</SelectItem>
+                    <SelectItem value="Singapore">🇸🇬 Singapore</SelectItem>
+                    <SelectItem value="Australia">🇦🇺 Australia</SelectItem>
+                    <SelectItem value="Canada">🇨🇦 Canada</SelectItem>
+                    <SelectItem value="Japan">🇯🇵 Japan</SelectItem>
+                    <SelectItem value="South Korea">🇰🇷 South Korea</SelectItem>
+                    <SelectItem value="Malaysia">🇲🇾 Malaysia</SelectItem>
+                    <SelectItem value="Thailand">🇹🇭 Thailand</SelectItem>
+                    <SelectItem value="Philippines">🇵🇭 Philippines</SelectItem>
+                    <SelectItem value="Indonesia">🇮🇩 Indonesia</SelectItem>
+                    <SelectItem value="Vietnam">🇻🇳 Vietnam</SelectItem>
+                    <SelectItem value="Taiwan">🇹🇼 Taiwan</SelectItem>
+                    <SelectItem value="China">🇨🇳 China</SelectItem>
+                    <SelectItem value="India">🇮🇳 India</SelectItem>
+                    <SelectItem value="Germany">🇩🇪 Germany</SelectItem>
+                    <SelectItem value="France">🇫🇷 France</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Expected Videos */}
               <div className="space-y-2">
                 <Label htmlFor="videoCount">Expected Number of Videos *</Label>
