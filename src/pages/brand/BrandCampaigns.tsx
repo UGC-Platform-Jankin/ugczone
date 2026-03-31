@@ -61,13 +61,15 @@ const BrandCampaigns = () => {
   };
 
   const viewCreatorProfile = async (creatorUserId: string) => {
+    setViewingCreator(creatorUserId);
+    setCreatorProfile(null);
+    setCreatorSocials([]);
     const [profileRes, socialsRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", creatorUserId).single(),
       supabase.from("social_connections").select("*").eq("user_id", creatorUserId),
     ]);
     setCreatorProfile(profileRes.data);
     setCreatorSocials(socialsRes.data || []);
-    setViewingCreator(creatorUserId);
   };
 
   const handleApplicationAction = async (appId: string, status: "accepted" | "rejected", app: any) => {
