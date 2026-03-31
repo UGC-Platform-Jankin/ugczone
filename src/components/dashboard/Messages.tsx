@@ -89,17 +89,29 @@ const Messages = () => {
             .select("user_id")
             .eq("chat_room_id", room.id);
           const otherUserId = parts?.find((p: any) => p.user_id !== user.id)?.user_id;
-          let displayName = "Chat";
+          let displayName = room.name || "Direct Message";
           let avatarUrl: string | null = null;
           if (otherUserId) {
+            // Try creator profile first
             const { data: profile } = await supabase
               .from("profiles")
               .select("display_name, username, avatar_url")
               .eq("user_id", otherUserId)
               .maybeSingle();
-            if (profile) {
-              displayName = profile.display_name || profile.username || "User";
+            if (profile?.display_name || profile?.username) {
+              displayName = profile.display_name || profile.username || displayName;
               avatarUrl = profile.avatar_url;
+            } else {
+              // Try brand profile
+              const { data: brand } = await supabase
+                .from("brand_profiles")
+                .select("business_name, logo_url")
+                .eq("user_id", otherUserId)
+                .maybeSingle();
+              if (brand) {
+                displayName = brand.business_name || displayName;
+                avatarUrl = brand.logo_url;
+              }
             }
           }
           meta[room.id] = {
