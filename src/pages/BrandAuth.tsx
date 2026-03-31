@@ -89,7 +89,7 @@ const BrandAuth = () => {
           </div>
           <p className="text-muted-foreground text-sm mb-6">Find UGC creators for your business</p>
 
-          <Tabs defaultValue="login">
+          <Tabs defaultValue={searchParams.get("mode") === "signup" ? "signup" : "login"}>
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="login">Log In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
