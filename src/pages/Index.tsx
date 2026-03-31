@@ -6,6 +6,7 @@ import Reviews from "@/components/landing/Reviews";
 import About from "@/components/landing/About";
 import Contact from "@/components/landing/Contact";
 import CTA from "@/components/landing/CTA";
+import BrandCTA from "@/components/landing/BrandCTA";
 import Footer from "@/components/landing/Footer";
 const Index = () => {
   return (
