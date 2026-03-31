@@ -58,9 +58,10 @@ const Profile = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
-      const [profileRes, socialsRes] = await Promise.all([
+      const [profileRes, socialsRes, collabsRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("user_id", user.id).single(),
         supabase.from("social_connections").select("id, platform, profile_url, followers_count, average_views").eq("user_id", user.id),
+        supabase.from("past_collaborations" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       ]);
       if (profileRes.data) {
         setUsername(profileRes.data.username || "");
