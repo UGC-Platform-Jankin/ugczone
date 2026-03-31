@@ -199,10 +199,10 @@ const BrandCampaigns = () => {
           console.error("Failed to create private chat:", privateError);
         } else if (privateRoom) {
           privateRoomId = privateRoom.id;
-          await supabase.from("chat_participants").insert([
-            { chat_room_id: privateRoom.id, user_id: user.id },
-            { chat_room_id: privateRoom.id, user_id: app.creator_user_id },
-          ] as any);
+          const participantIds = [...new Set([user.id, app.creator_user_id])];
+          await supabase.from("chat_participants").insert(
+            participantIds.map((participantId) => ({ chat_room_id: privateRoom.id, user_id: participantId })) as any
+          );
           await supabase.from("messages").insert({
             chat_room_id: privateRoom.id,
             sender_id: user.id,
