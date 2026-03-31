@@ -178,6 +178,16 @@ const FindCreators = () => {
   const totalFollowers = (c: Creator) => c.socials.reduce((sum, s) => sum + (s.followers_count || 0), 0);
   const hasActiveFilters = platformFilter !== "all" || followerFilter !== 0 || search.trim() !== "";
 
+  const handleViewCreator = async (creator: Creator) => {
+    setViewingCreator(creator);
+    // Fetch full social details
+    const { data: socials } = await supabase.from("social_connections").select("*").eq("user_id", creator.user_id);
+    setCreatorSocialDetails(socials || []);
+    // Fetch past collaborations
+    const { data: collabs } = await supabase.from("past_collaborations" as any).select("*").eq("user_id", creator.user_id).order("created_at", { ascending: false });
+    setCreatorCollabs(collabs || []);
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
