@@ -1,0 +1,1 @@
+ALTER TABLE public.social_connections ADD COLUMN IF NOT EXISTS profile_url text;

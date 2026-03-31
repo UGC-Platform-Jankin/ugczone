@@ -1,274 +1,217 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Instagram, Facebook, Users, Eye, Video, UserPlus, Link2, Unlink, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Instagram, Facebook, Video, Users, Eye, Save, Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface SocialConnection {
-  id: string;
-  platform: string;
-  platform_username: string | null;
-  followers_count: number | null;
-  following_count: number | null;
-  average_views: number | null;
-  video_count: number | null;
-  profile_picture_url: string | null;
+interface SocialForm {
+  profile_url: string;
+  followers_count: string;
+  average_views: string;
 }
 
-const platformConfig = {
-  instagram: {
-    name: "Instagram",
-    icon: Instagram,
-    bgColor: "bg-pink-500/10",
-    textColor: "text-pink-400",
-  },
-  tiktok: {
-    name: "TikTok",
-    icon: Video,
-    bgColor: "bg-cyan-500/10",
-    textColor: "text-cyan-400",
-  },
-  facebook: {
-    name: "Facebook",
-    icon: Facebook,
-    bgColor: "bg-blue-500/10",
-    textColor: "text-blue-400",
-  },
-};
+const platforms = [
+  { key: "instagram", name: "Instagram", icon: Instagram, placeholder: "https://instagram.com/yourhandle", color: "text-pink-400", bg: "bg-pink-500/10" },
+  { key: "facebook", name: "Facebook", icon: Facebook, placeholder: "https://facebook.com/yourpage", color: "text-blue-400", bg: "bg-blue-500/10" },
+  { key: "tiktok", name: "TikTok", icon: Video, placeholder: "https://tiktok.com/@yourhandle", color: "text-cyan-400", bg: "bg-cyan-500/10" },
+] as const;
+
+const emptyForm: SocialForm = { profile_url: "", followers_count: "", average_views: "" };
 
 const Socials = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [connections, setConnections] = useState<SocialConnection[]>([]);
+  const [forms, setForms] = useState<Record<string, SocialForm>>({
+    instagram: { ...emptyForm },
+    facebook: { ...emptyForm },
+    tiktok: { ...emptyForm },
+  });
+  const [existingIds, setExistingIds] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [connecting, setConnecting] = useState<string | null>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [saving, setSaving] = useState<string | null>(null);
 
   const fetchConnections = async () => {
     if (!user) return;
     const { data } = await supabase
       .from("social_connections")
-      .select("*")
+      .select("id, platform, profile_url, followers_count, average_views")
       .eq("user_id", user.id);
-    setConnections(data || []);
+
+    if (data) {
+      const newForms = { ...forms };
+      const newIds: Record<string, string> = {};
+      data.forEach((c) => {
+        newForms[c.platform] = {
+          profile_url: (c as any).profile_url || "",
+          followers_count: c.followers_count?.toString() || "",
+          average_views: c.average_views?.toString() || "",
+        };
+        newIds[c.platform] = c.id;
+      });
+      setForms(newForms);
+      setExistingIds(newIds);
+    }
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchConnections();
-  }, [user]);
+  useEffect(() => { fetchConnections(); }, [user]);
 
-  // Handle OAuth callback results
-  useEffect(() => {
-    const success = searchParams.get("success");
-    const error = searchParams.get("error");
-    const platform = searchParams.get("platform");
+  const updateField = (platform: string, field: keyof SocialForm, value: string) => {
+    setForms((prev) => ({ ...prev, [platform]: { ...prev[platform], [field]: value } }));
+  };
 
-    if (success === "true" && platform) {
-      toast({ title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} connected!`, description: "Your social account has been linked successfully." });
-      fetchConnections();
-      setSearchParams({});
-    } else if (error) {
-      toast({ title: "Connection failed", description: `Error: ${error}`, variant: "destructive" });
-      setSearchParams({});
-    }
-  }, [searchParams]);
-
-  const handleConnect = async (platform: string) => {
+  const handleSave = async (platform: string) => {
     if (!user) return;
-    setConnecting(platform);
+    setSaving(platform);
+    const form = forms[platform];
+    const followers = parseInt(form.followers_count) || 0;
+    const views = parseInt(form.average_views) || 0;
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({ title: "Not authenticated", variant: "destructive" });
-        setConnecting(null);
-        return;
-      }
+    const row = {
+      user_id: user.id,
+      platform,
+      profile_url: form.profile_url.trim(),
+      followers_count: followers,
+      average_views: views,
+    };
 
-      const redirectUri = `${window.location.origin}/dashboard/socials`;
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const res = await fetch(
-        `${supabaseUrl}/functions/v1/social-auth?platform=${platform}&redirect_uri=${encodeURIComponent(redirectUri)}&user_id=${user.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-        }
-      );
-
-      const data = await res.json();
-
-      if (data.error) {
-        toast({ title: "Setup required", description: data.error, variant: "destructive" });
-        setConnecting(null);
-        return;
-      }
-
-      if (data.auth_url) {
-        // Redirect to OAuth provider
-        window.location.href = data.auth_url;
-      }
-    } catch (err) {
-      console.error("Connect error:", err);
-      toast({ title: "Connection failed", description: "Something went wrong", variant: "destructive" });
-      setConnecting(null);
-    }
-  };
-
-  const handleDisconnect = async (connectionId: string) => {
-    const { error } = await supabase
-      .from("social_connections")
-      .delete()
-      .eq("id", connectionId);
-    if (error) {
-      toast({ title: "Error", description: "Failed to disconnect", variant: "destructive" });
+    let error;
+    if (existingIds[platform]) {
+      ({ error } = await supabase.from("social_connections").update(row).eq("id", existingIds[platform]));
     } else {
-      toast({ title: "Disconnected" });
-      fetchConnections();
+      const { data, error: e } = await supabase.from("social_connections").insert(row).select("id").single();
+      error = e;
+      if (data) setExistingIds((prev) => ({ ...prev, [platform]: data.id }));
+    }
+
+    if (error) {
+      toast({ title: "Error saving", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} saved!` });
+    }
+    setSaving(null);
+  };
+
+  const handleRemove = async (platform: string) => {
+    if (!existingIds[platform]) return;
+    const { error } = await supabase.from("social_connections").delete().eq("id", existingIds[platform]);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setForms((prev) => ({ ...prev, [platform]: { ...emptyForm } }));
+      setExistingIds((prev) => { const n = { ...prev }; delete n[platform]; return n; });
+      toast({ title: "Removed" });
     }
   };
 
-  const formatNumber = (num: number | null) => {
-    if (!num) return "0";
+  const formatNumber = (num: number) => {
     if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
     if (num >= 1_000) return (num / 1_000).toFixed(1) + "K";
     return num.toString();
   };
 
+  const totalFollowers = Object.values(forms).reduce((s, f) => s + (parseInt(f.followers_count) || 0), 0);
+  const filledPlatforms = Object.values(forms).filter((f) => parseInt(f.average_views) > 0);
+  const avgViews = filledPlatforms.length ? Math.round(filledPlatforms.reduce((s, f) => s + (parseInt(f.average_views) || 0), 0) / filledPlatforms.length) : 0;
+
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-heading font-bold text-foreground">Connected Socials</h1>
-        <p className="text-muted-foreground mt-1">Link your social media accounts to showcase your reach</p>
+        <h1 className="text-3xl font-heading font-bold text-foreground">Your Socials</h1>
+        <p className="text-muted-foreground mt-1">Add your social media profiles and stats to showcase your reach</p>
       </div>
 
-      {connections.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: "Total Followers", icon: Users, value: connections.reduce((sum, c) => sum + (c.followers_count || 0), 0) },
-            { label: "Total Following", icon: UserPlus, value: connections.reduce((sum, c) => sum + (c.following_count || 0), 0) },
-            { label: "Avg Views", icon: Eye, value: connections.length ? Math.round(connections.reduce((sum, c) => sum + (c.average_views || 0), 0) / connections.length) : 0 },
-            { label: "Total Videos", icon: Video, value: connections.reduce((sum, c) => sum + (c.video_count || 0), 0) },
-          ].map((stat) => (
-            <Card key={stat.label} className="border-border/50">
-              <CardContent className="p-4 flex flex-col items-center text-center gap-1">
-                <stat.icon className="h-5 w-5 text-primary mb-1" />
-                <span className="text-2xl font-heading font-bold text-foreground">{formatNumber(stat.value)}</span>
-                <span className="text-xs text-muted-foreground">{stat.label}</span>
-              </CardContent>
-            </Card>
-          ))}
+      {totalFollowers > 0 && (
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <Card className="border-border/50">
+            <CardContent className="p-4 flex flex-col items-center text-center gap-1">
+              <Users className="h-5 w-5 text-primary mb-1" />
+              <span className="text-2xl font-heading font-bold text-foreground">{formatNumber(totalFollowers)}</span>
+              <span className="text-xs text-muted-foreground">Total Followers</span>
+            </CardContent>
+          </Card>
+          <Card className="border-border/50">
+            <CardContent className="p-4 flex flex-col items-center text-center gap-1">
+              <Eye className="h-5 w-5 text-primary mb-1" />
+              <span className="text-2xl font-heading font-bold text-foreground">{formatNumber(avgViews)}</span>
+              <span className="text-xs text-muted-foreground">Avg Views</span>
+            </CardContent>
+          </Card>
         </div>
       )}
 
       <div className="grid gap-6">
-        {(Object.keys(platformConfig) as Array<keyof typeof platformConfig>).map((platform) => {
-          const config = platformConfig[platform];
-          const connection = connections.find((c) => c.platform === platform);
-          const Icon = config.icon;
-          const isConnecting = connecting === platform;
+        {platforms.map(({ key, name, icon: Icon, placeholder, color, bg }) => {
+          const form = forms[key];
+          const hasExisting = !!existingIds[key];
+          const isSaving = saving === key;
 
           return (
-            <Card key={platform} className="border-border/50">
+            <Card key={key} className="border-border/50">
               <CardContent className="p-6">
-                {connection ? (
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-14 w-14">
-                        <AvatarImage src={connection.profile_picture_url || ""} />
-                        <AvatarFallback className={config.bgColor}>
-                          <Icon className={`h-6 w-6 ${config.textColor}`} />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-heading font-semibold text-foreground">
-                            {connection.platform_username || config.name}
-                          </h3>
-                          <Badge variant="secondary" className="text-xs">Connected</Badge>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Users className="h-3.5 w-3.5" />
-                            <span>{formatNumber(connection.followers_count)} followers</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <UserPlus className="h-3.5 w-3.5" />
-                            <span>{formatNumber(connection.following_count)} following</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Eye className="h-3.5 w-3.5" />
-                            <span>{formatNumber(connection.average_views)} avg views</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Video className="h-3.5 w-3.5" />
-                            <span>{formatNumber(connection.video_count)} videos</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => handleDisconnect(connection.id)}
-                    >
-                      <Unlink className="h-4 w-4 mr-1" />
-                      Disconnect
-                    </Button>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`h-10 w-10 rounded-full ${bg} flex items-center justify-center`}>
+                    <Icon className={`h-5 w-5 ${color}`} />
                   </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`h-14 w-14 rounded-full ${config.bgColor} flex items-center justify-center`}>
-                        <Icon className={`h-6 w-6 ${config.textColor}`} />
-                      </div>
-                      <div>
-                        <h3 className="font-heading font-semibold text-foreground">{config.name}</h3>
-                        <p className="text-sm text-muted-foreground">Not connected</p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleConnect(platform)}
-                      disabled={isConnecting}
-                      className="border-border/50"
-                    >
-                      {isConnecting ? (
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                      ) : (
-                        <Link2 className="h-4 w-4 mr-1" />
-                      )}
-                      {isConnecting ? "Connecting..." : "Connect"}
-                    </Button>
+                  <h3 className="font-heading font-semibold text-foreground">{name}</h3>
+                </div>
+
+                <div className="grid gap-4">
+                  <div>
+                    <Label htmlFor={`${key}-url`} className="text-muted-foreground text-sm">Profile Link</Label>
+                    <Input
+                      id={`${key}-url`}
+                      placeholder={placeholder}
+                      value={form.profile_url}
+                      onChange={(e) => updateField(key, "profile_url", e.target.value)}
+                      className="mt-1"
+                    />
                   </div>
-                )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor={`${key}-followers`} className="text-muted-foreground text-sm">Followers</Label>
+                      <Input
+                        id={`${key}-followers`}
+                        type="number"
+                        placeholder="e.g. 10000"
+                        value={form.followers_count}
+                        onChange={(e) => updateField(key, "followers_count", e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`${key}-views`} className="text-muted-foreground text-sm">Avg Views</Label>
+                      <Input
+                        id={`${key}-views`}
+                        type="number"
+                        placeholder="e.g. 5000"
+                        value={form.average_views}
+                        onChange={(e) => updateField(key, "average_views", e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => handleSave(key)} disabled={isSaving} size="sm">
+                      {isSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+                      {hasExisting ? "Update" : "Save"}
+                    </Button>
+                    {hasExisting && (
+                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleRemove(key)}>
+                        <Trash2 className="h-4 w-4 mr-1" /> Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
-
-      <Card className="border-border/50 mt-8">
-        <CardContent className="p-6">
-          <h3 className="font-heading font-semibold text-foreground mb-2">Setup Instructions</h3>
-          <p className="text-sm text-muted-foreground mb-3">
-            To connect your social accounts, the platform needs API credentials from each provider:
-          </p>
-          <ul className="text-sm text-muted-foreground space-y-2 list-disc pl-5">
-            <li><strong className="text-foreground">Instagram & Facebook:</strong> Create a Meta Developer App at <a href="https://developers.facebook.com" target="_blank" rel="noopener" className="text-primary hover:underline">developers.facebook.com</a></li>
-            <li><strong className="text-foreground">TikTok:</strong> Create a TikTok Developer App at <a href="https://developers.tiktok.com" target="_blank" rel="noopener" className="text-primary hover:underline">developers.tiktok.com</a></li>
-          </ul>
-        </CardContent>
-      </Card>
     </div>
   );
 };
