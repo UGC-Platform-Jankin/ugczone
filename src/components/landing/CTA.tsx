@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const CTA = () => {
   return (
@@ -25,8 +26,8 @@ const CTA = () => {
               Join the brands and creators already using UGC Zone to streamline campaigns across Hong Kong and London.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-gradient-coral text-primary-foreground hover:opacity-90 transition-opacity gap-2 text-base px-8 h-12 shadow-glow">
-                Get Started Free <ArrowRight className="h-4 w-4" />
+              <Button size="lg" className="bg-gradient-coral text-primary-foreground hover:opacity-90 transition-opacity gap-2 text-base px-8 h-12 shadow-glow" asChild>
+                <Link to="/get-started">Get Started Free <ArrowRight className="h-4 w-4" /></Link>
               </Button>
               <Button size="lg" variant="outline" className="text-base h-12 border-border text-foreground hover:bg-secondary">
                 Talk to Sales
