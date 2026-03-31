@@ -16,10 +16,18 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("user_roles" as any).select("role").eq("user_id", user.id).eq("role", "admin").then(({ data }) => {
+      if (data && (data as any[]).length > 0) setIsAdmin(true);
+    });
+  }, [user]);
 
   if (loading) {
     return (
