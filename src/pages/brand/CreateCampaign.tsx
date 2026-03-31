@@ -54,6 +54,7 @@ const CreateCampaign = () => {
   const [campaignLengthDays, setCampaignLengthDays] = useState("");
   const [requirements, setRequirements] = useState("");
   const [selectedRegions, setSelectedRegions] = useState<string[]>(["Worldwide"]);
+  const [maxCreators, setMaxCreators] = useState("10");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
