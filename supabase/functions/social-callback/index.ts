@@ -41,15 +41,15 @@ serve(async (req) => {
 
     if (platform === "instagram") {
       // Exchange code for short-lived token
-      const metaAppId = Deno.env.get("META_APP_ID")!;
-      const metaAppSecret = Deno.env.get("META_APP_SECRET")!;
+      const instaAppId = Deno.env.get("INSTAGRAM_APP_ID")!;
+      const instaAppSecret = Deno.env.get("INSTAGRAM_APP_SECRET")!;
 
       const tokenRes = await fetch("https://api.instagram.com/oauth/access_token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
-          client_id: metaAppId,
-          client_secret: metaAppSecret,
+          client_id: instaAppId,
+          client_secret: instaAppSecret,
           grant_type: "authorization_code",
           redirect_uri: callbackUrl,
           code,
@@ -66,7 +66,7 @@ serve(async (req) => {
 
       // Exchange for long-lived token
       const longLivedRes = await fetch(
-        `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${metaAppSecret}&access_token=${accessToken}`
+        `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${instaAppSecret}&access_token=${accessToken}`
       );
       const longLivedData = await longLivedRes.json();
       if (longLivedRes.ok && longLivedData.access_token) {
