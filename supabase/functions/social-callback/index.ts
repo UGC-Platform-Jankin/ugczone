@@ -66,7 +66,7 @@ serve(async (req) => {
 
       // Exchange for long-lived token
       const longLivedRes = await fetch(
-        `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${metaAppSecret}&access_token=${accessToken}`
+        `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${instaAppSecret}&access_token=${accessToken}`
       );
       const longLivedData = await longLivedRes.json();
       if (longLivedRes.ok && longLivedData.access_token) {
