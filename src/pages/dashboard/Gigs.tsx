@@ -345,7 +345,7 @@ const Gigs = () => {
           <div className="space-y-4 mt-2">
             <div>
               <Textarea
-                placeholder="Tell the brand why you're the perfect creator for this campaign — your experience, content style, audience match, etc."
+                placeholder="Tell the brand why you're the perfect creator for this campaign. Share your experience, content style, audience match, etc."
                 value={coverLetter}
                 onChange={(e) => setCoverLetter(e.target.value)}
                 className="min-h-[200px]"

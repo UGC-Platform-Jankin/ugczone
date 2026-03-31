@@ -178,7 +178,7 @@ const CreateCampaign = () => {
                 <Label htmlFor="description">Description * <span className="text-xs text-muted-foreground">(min 500 characters)</span></Label>
                 <Textarea
                   id="description"
-                  placeholder="Describe what you're looking for — content style, talking points, dos & don'ts, target audience, etc."
+                  placeholder="Describe what you're looking for: content style, talking points, dos and don'ts, target audience, etc."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   required

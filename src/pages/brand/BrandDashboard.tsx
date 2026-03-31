@@ -222,7 +222,7 @@ const BrandDashboard = () => {
                 <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">3</div>
                 <div>
                   <p className="font-medium text-foreground">Receive & Approve Content</p>
-                  <p className="text-sm text-muted-foreground">Get UGC content delivered, review it, and process payment — all in one place.</p>
+                  <p className="text-sm text-muted-foreground">Get UGC content delivered, review it, and process payment, all in one place.</p>
                 </div>
               </div>
             </CardContent>

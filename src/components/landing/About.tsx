@@ -6,7 +6,7 @@ const values = [
   {
     icon: Globe,
     title: "Two Markets, One Platform",
-    description: "Built for Hong Kong and London — two cities where UGC demand is growing fast but no dominant platform exists.",
+    description: "Built for Hong Kong and London, two cities where UGC demand is growing fast but no dominant platform exists.",
   },
   {
     icon: Users,

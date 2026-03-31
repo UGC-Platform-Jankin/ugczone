@@ -355,7 +355,7 @@ const Profile = () => {
               <Briefcase className="h-5 w-5" />
               Past Collaborations
             </CardTitle>
-            <CardDescription>Brands you've worked with — visible on your profile</CardDescription>
+            <CardDescription>Brands you've worked with. Visible on your profile.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {collaborations.length > 0 && (

@@ -3,10 +3,17 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-abstract.jpg";
+import heroBg from "@/assets/hero-bg.jpg";
 
 const Hero = () => {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-hero pt-16">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+      {/* Background image */}
+      <div className="absolute inset-0">
+        <img src={heroBg} alt="" className="w-full h-full object-cover" aria-hidden="true" />
+        <div className="absolute inset-0 bg-background/70" />
+      </div>
+
       {/* Grid pattern overlay */}
       <div className="absolute inset-0 opacity-[0.03]" style={{
         backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
@@ -32,7 +39,7 @@ const Hero = () => {
             </h1>
 
             <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
-              The all-in-one platform to launch UGC campaigns, manage creators, review content and handle payments — in one place.
+              The all-in-one platform to launch UGC campaigns, manage creators, review content and handle payments, all in one place.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -42,19 +49,6 @@ const Hero = () => {
               <Button size="lg" variant="outline" className="gap-2 text-base h-12 border-border text-foreground hover:bg-secondary">
                 <Play className="h-4 w-4" /> Watch Demo
               </Button>
-            </div>
-
-            <div className="flex items-center gap-6 pt-4">
-              <div className="flex -space-x-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-9 w-9 rounded-full border-2 border-background bg-secondary flex items-center justify-center text-xs font-medium text-muted-foreground">
-                    {String.fromCharCode(64 + i)}
-                  </div>
-                ))}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                <span className="text-foreground font-semibold">200+</span> creators already joined
-              </p>
             </div>
           </motion.div>
 
