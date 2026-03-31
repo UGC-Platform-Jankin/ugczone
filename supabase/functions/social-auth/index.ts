@@ -15,10 +15,21 @@ serve(async (req) => {
     const platform = url.searchParams.get("platform");
     const redirectUri = url.searchParams.get("redirect_uri");
 
+    const userId = url.searchParams.get("user_id");
+
     if (!platform || !redirectUri) {
       return new Response(
         JSON.stringify({ error: "Missing platform or redirect_uri" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Missing user_id" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
       );
     }
 
