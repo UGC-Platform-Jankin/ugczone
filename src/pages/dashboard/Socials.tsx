@@ -92,13 +92,6 @@ const Socials = () => {
       }
 
       const redirectUri = `${window.location.origin}/dashboard/socials`;
-
-      const response = await supabase.functions.invoke("social-auth", {
-        body: null,
-        headers: {},
-      });
-
-      // Use fetch directly to pass query params
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const res = await fetch(
         `${supabaseUrl}/functions/v1/social-auth?platform=${platform}&redirect_uri=${encodeURIComponent(redirectUri)}&user_id=${user.id}`,
