@@ -9,10 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Users, Search, Send, Loader2, Instagram, Facebook, Video, Filter, X } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Users, Search, Send, Loader2, Instagram, Facebook, Video, Filter, X, Eye, Globe, Briefcase } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const platformIcons: Record<string, any> = { instagram: Instagram, facebook: Facebook, tiktok: Video };
+const platformColors: Record<string, string> = { instagram: "text-pink-400", facebook: "text-blue-400", tiktok: "text-cyan-400" };
 const platformOptions = ["instagram", "tiktok", "facebook"];
 const followerRanges = [
   { label: "Any", min: 0, max: Infinity },
@@ -32,6 +36,13 @@ interface Creator {
   socials: any[];
 }
 
+const formatCount = (n: number | null) => {
+  if (!n) return "—";
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return n.toString();
+};
+
 const FindCreators = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -46,6 +57,9 @@ const FindCreators = () => {
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
   const [inviteMessage, setInviteMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [viewingCreator, setViewingCreator] = useState<Creator | null>(null);
+  const [creatorCollabs, setCreatorCollabs] = useState<any[]>([]);
+  const [creatorSocialDetails, setCreatorSocialDetails] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
