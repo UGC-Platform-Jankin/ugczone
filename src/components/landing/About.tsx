@@ -15,7 +15,7 @@ const values = [
   {
     icon: Zap,
     title: "Built from Experience",
-    description: "CreatorHub was born from running real UGC campaigns. We know the pain points because we've lived them — and we built the solution.",
+    description: "UGC Zone was born from running real UGC campaigns. We know the pain points because we've lived them — and we built the solution.",
   },
 ];
 
