@@ -544,6 +544,11 @@ const BrandCampaigns = () => {
                           </Button>
                         </div>
                       )}
+                      {app.status === "accepted" && (
+                        <Button size="sm" variant="outline" className="text-destructive hover:text-destructive shrink-0" onClick={() => setRemovingCreator(app)}>
+                          <X className="h-4 w-4 mr-1" /> Remove
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
