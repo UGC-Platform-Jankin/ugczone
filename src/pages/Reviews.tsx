@@ -173,20 +173,8 @@ const ReviewsPage = () => {
               </div>
             </motion.div>
           )}
-              <Textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Share your experience with UGC Zone..."
-                className="bg-secondary border-border mb-4"
-                rows={3}
-              />
-              <Button onClick={handleSubmit} disabled={submitting || !content.trim()} className="bg-gradient-coral text-primary-foreground gap-2">
-                <Send className="h-4 w-4" />
-                {submitting ? "Submitting..." : "Submit Review"}
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2">Reviews are published after approval.</p>
-            </motion.div>
-          )}
+
+
 
           {/* Reviews list */}
           {loading ? (
