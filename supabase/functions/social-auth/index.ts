@@ -39,7 +39,7 @@ serve(async (req) => {
     const callbackUrl = `${supabaseUrl}/functions/v1/social-callback`;
 
     // Encode state with platform and frontend redirect
-    const state = btoa(JSON.stringify({ platform, redirect_uri: redirectUri }));
+    const state = btoa(JSON.stringify({ platform, redirect_uri: redirectUri, user_id: userId }));
 
     let authUrl: string;
 
