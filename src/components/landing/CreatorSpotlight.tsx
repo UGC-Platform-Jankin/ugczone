@@ -116,7 +116,7 @@ const CreatorSpotlight = () => {
           >
             <img src={creatorsImage} alt="UGC creators collaborating" loading="lazy" width={1280} height={720} className="w-full h-auto" />
             <div className="p-6 text-center bg-gradient-card">
-              <p className="text-muted-foreground">Creator spotlights coming soon — join now to be featured!</p>
+              <p className="text-muted-foreground">Creator spotlights coming soon. Join now to be featured!</p>
             </div>
           </motion.div>
         )}
