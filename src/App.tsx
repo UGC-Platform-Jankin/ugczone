@@ -17,7 +17,7 @@ import Messages from "./components/dashboard/Messages.tsx";
 import BrandSetup from "./pages/brand/BrandSetup.tsx";
 import BrandDashboard from "./pages/brand/BrandDashboard.tsx";
 import CreateCampaign from "./pages/brand/CreateCampaign.tsx";
-import BrandProfile from "./pages/brand/BrandProfile.tsx";
+import BrandProfileContent from "./pages/brand/BrandProfile.tsx";
 import BrandCampaigns from "./pages/brand/BrandCampaigns.tsx";
 
 const queryClient = new QueryClient();
