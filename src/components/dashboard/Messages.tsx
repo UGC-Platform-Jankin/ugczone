@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageCircle, Send, Loader2, Users, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface ChatRoom {
   id: string;
