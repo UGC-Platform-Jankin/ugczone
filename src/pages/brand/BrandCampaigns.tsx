@@ -31,6 +31,8 @@ const BrandCampaigns = () => {
   const [updatingApp, setUpdatingApp] = useState<string | null>(null);
   const [endingCampaign, setEndingCampaign] = useState<string | null>(null);
   const [campaignTab, setCampaignTab] = useState("active");
+  const [removingCreator, setRemovingCreator] = useState<any>(null);
+  const [removingLoading, setRemovingLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
