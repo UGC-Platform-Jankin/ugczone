@@ -39,6 +39,7 @@ const App = () => (
             <Route path="/get-started" element={<GetStarted />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/reviews" element={<ReviewsPage />} />
+            <Route path="/about" element={<AboutPage />} />
             <Route path="/dashboard" element={<DashboardLayout><Gigs /></DashboardLayout>} />
             <Route path="/dashboard/messages" element={<DashboardLayout><Messages /></DashboardLayout>} />
             <Route path="/dashboard/profile" element={<DashboardLayout><Profile /></DashboardLayout>} />
