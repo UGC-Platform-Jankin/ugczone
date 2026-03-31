@@ -101,6 +101,7 @@ export type Database = {
           platform_user_id: string | null
           platform_username: string | null
           profile_picture_url: string | null
+          profile_url: string | null
           refresh_token: string | null
           updated_at: string
           user_id: string
@@ -117,6 +118,7 @@ export type Database = {
           platform_user_id?: string | null
           platform_username?: string | null
           profile_picture_url?: string | null
+          profile_url?: string | null
           refresh_token?: string | null
           updated_at?: string
           user_id: string
@@ -133,6 +135,7 @@ export type Database = {
           platform_user_id?: string | null
           platform_username?: string | null
           profile_picture_url?: string | null
+          profile_url?: string | null
           refresh_token?: string | null
           updated_at?: string
           user_id?: string
