@@ -48,8 +48,8 @@ serve(async (req) => {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
-          client_id: metaAppId,
-          client_secret: metaAppSecret,
+          client_id: instaAppId,
+          client_secret: instaAppSecret,
           grant_type: "authorization_code",
           redirect_uri: callbackUrl,
           code,
