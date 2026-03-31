@@ -47,7 +47,7 @@ const Messages = () => {
   const [sending, setSending] = useState(false);
   const [participants, setParticipants] = useState<Record<string, any>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+  const [profileOpen, setProfileOpen] = useState(false);
   // Fetch rooms + metadata (other user name for private chats, last message)
   useEffect(() => {
     if (!user) return;
