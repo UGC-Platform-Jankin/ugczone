@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageCircle, Send, Loader2, ArrowLeft, Users } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface ChatRoom {
@@ -35,6 +35,8 @@ interface RoomMeta {
 const Messages = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isBrandView = location.pathname.startsWith("/brand");
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [roomMeta, setRoomMeta] = useState<Record<string, RoomMeta>>({});
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
@@ -83,42 +85,36 @@ const Messages = () => {
         const lastMsg = lastMsgs?.[0];
 
         if (room.type === "private") {
-          // Get the other participant's profile
           const { data: parts } = await supabase
             .from("chat_participants")
             .select("user_id")
             .eq("chat_room_id", room.id);
+
           const otherUserId = parts?.find((p: any) => p.user_id !== user.id)?.user_id;
-          let displayName = room.name || "Chat";
-          let avatarUrl: string | null = null;
-          if (otherUserId) {
-            // Try creator profile first
-            const { data: profile } = await supabase
+          const lookupUserId = otherUserId || user.id;
+          const [{ data: profile }, { data: brand }] = await Promise.all([
+            supabase
               .from("profiles")
               .select("display_name, username, avatar_url")
-              .eq("user_id", otherUserId)
-              .maybeSingle();
-            if (profile?.display_name || profile?.username) {
-              displayName = profile.display_name || profile.username || displayName;
-              avatarUrl = profile.avatar_url;
-            }
-            // Also try brand profile (might have both)
-            const { data: brand } = await supabase
+              .eq("user_id", lookupUserId)
+              .maybeSingle(),
+            supabase
               .from("brand_profiles")
               .select("business_name, logo_url")
-              .eq("user_id", otherUserId)
-              .maybeSingle();
-            if (brand?.business_name) {
-              // Prefer brand name if no creator display name was found
-              if (!profile?.display_name && !profile?.username) {
-                displayName = brand.business_name;
-              }
-              avatarUrl = avatarUrl || brand.logo_url;
-            }
-          }
+              .eq("user_id", lookupUserId)
+              .maybeSingle(),
+          ]);
+
+          const creatorName = profile?.display_name || profile?.username || null;
+          const brandName = brand?.business_name || null;
+
           meta[room.id] = {
-            displayName,
-            avatarUrl,
+            displayName: isBrandView
+              ? creatorName || brandName || room.name || "Chat"
+              : brandName || creatorName || room.name || "Chat",
+            avatarUrl: isBrandView
+              ? profile?.avatar_url || brand?.logo_url || null
+              : brand?.logo_url || profile?.avatar_url || null,
             lastMessage: lastMsg?.content?.replace(/\[CAMPAIGN_INVITE:[^\]]+\]/, "").trim() || "No messages yet",
             lastMessageTime: lastMsg?.created_at || room.created_at,
             isGroup: false,
@@ -146,7 +142,7 @@ const Messages = () => {
       setLoading(false);
     };
     fetchRooms();
-  }, [user]);
+  }, [isBrandView, user]);
 
   useEffect(() => {
     if (!selectedRoom || !user) return;
