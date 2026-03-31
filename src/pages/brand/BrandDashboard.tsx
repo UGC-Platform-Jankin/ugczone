@@ -50,8 +50,11 @@ const BrandDashboard = () => {
           <Link to="/brand/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-primary/10 text-primary">
             <BarChart3 className="h-4 w-4" /> Overview
           </Link>
-          <Link to="/brand/campaigns/new" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
+          <Link to="/brand/campaigns" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
             <Megaphone className="h-4 w-4" /> Campaigns
+          </Link>
+          <Link to="/brand/messages" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
+            <MessageCircle className="h-4 w-4" /> Messages
           </Link>
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer">
             <Users className="h-4 w-4" /> Find Creators
