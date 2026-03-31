@@ -435,6 +435,16 @@ const Messages = () => {
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
+          {selectedRoom && (
+            <ChatProfilePanel
+              open={profileOpen}
+              onOpenChange={setProfileOpen}
+              roomType={selectedRoom.type as "private" | "group"}
+              roomId={selectedRoom.id}
+              currentUserId={user!.id}
+              campaignId={selectedRoom.campaign_id}
+            />
+          )}
         </div>
       ) : (
         <div className="flex-1 hidden md:flex flex-col items-center justify-center text-muted-foreground">
