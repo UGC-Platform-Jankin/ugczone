@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Lock, Save, Camera, Loader2, Instagram, Facebook, Video, Users, Eye, Trash2 } from "lucide-react";
+import { User, Lock, Save, Camera, Loader2, Instagram, Facebook, Video, Users, Eye, Trash2, Briefcase, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface SocialForm {
@@ -49,12 +49,19 @@ const Profile = () => {
   });
   const [socialIds, setSocialIds] = useState<Record<string, string>>({});
 
+  // Past collaborations
+  const [collaborations, setCollaborations] = useState<any[]>([]);
+  const [newCollabBrand, setNewCollabBrand] = useState("");
+  const [newCollabDesc, setNewCollabDesc] = useState("");
+  const [savingCollab, setSavingCollab] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
-      const [profileRes, socialsRes] = await Promise.all([
+      const [profileRes, socialsRes, collabsRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("user_id", user.id).single(),
         supabase.from("social_connections").select("id, platform, profile_url, followers_count, average_views").eq("user_id", user.id),
+        supabase.from("past_collaborations" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       ]);
       if (profileRes.data) {
         setUsername(profileRes.data.username || "");
@@ -76,6 +83,7 @@ const Profile = () => {
         setSocialForms(newForms);
         setSocialIds(newIds);
       }
+      setCollaborations((collabsRes.data as any) || []);
       setLoading(false);
     };
     fetchData();
@@ -156,6 +164,33 @@ const Profile = () => {
     if (!error) {
       setSocialForms((prev) => ({ ...prev, [platform]: { ...emptyForm } }));
       setSocialIds((prev) => { const n = { ...prev }; delete n[platform]; return n; });
+      toast({ title: "Removed" });
+    }
+  };
+
+  const handleAddCollaboration = async () => {
+    if (!user || !newCollabBrand.trim()) return;
+    setSavingCollab(true);
+    const { data, error } = await supabase.from("past_collaborations" as any).insert({
+      user_id: user.id,
+      brand_name: newCollabBrand.trim(),
+      description: newCollabDesc.trim() || null,
+    }).select().single();
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setCollaborations((prev) => [data, ...prev]);
+      setNewCollabBrand("");
+      setNewCollabDesc("");
+      toast({ title: "Collaboration added!" });
+    }
+    setSavingCollab(false);
+  };
+
+  const handleRemoveCollaboration = async (id: string) => {
+    const { error } = await supabase.from("past_collaborations" as any).delete().eq("id", id);
+    if (!error) {
+      setCollaborations((prev) => prev.filter((c) => c.id !== id));
       toast({ title: "Removed" });
     }
   };
@@ -313,7 +348,50 @@ const Profile = () => {
           </CardContent>
         </Card>
 
-        {/* Change Password */}
+        {/* Past Collaborations */}
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5" />
+              Past Collaborations
+            </CardTitle>
+            <CardDescription>Brands you've worked with — visible on your profile</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {collaborations.length > 0 && (
+              <div className="space-y-2">
+                {collaborations.map((c: any) => (
+                  <div key={c.id} className="flex items-start justify-between p-3 rounded-lg bg-secondary/30">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{c.brand_name}</p>
+                      {c.description && <p className="text-xs text-muted-foreground mt-0.5">{c.description}</p>}
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive shrink-0 h-7 w-7 p-0" onClick={() => handleRemoveCollaboration(c.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Input
+                placeholder="Brand name"
+                value={newCollabBrand}
+                onChange={(e) => setNewCollabBrand(e.target.value)}
+              />
+              <Input
+                placeholder="Brief description (optional)"
+                value={newCollabDesc}
+                onChange={(e) => setNewCollabDesc(e.target.value)}
+              />
+              <Button size="sm" onClick={handleAddCollaboration} disabled={savingCollab || !newCollabBrand.trim()}>
+                {savingCollab ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
+                Add Collaboration
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

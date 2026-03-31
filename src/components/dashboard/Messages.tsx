@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageCircle, Send, Loader2, ArrowLeft, Users } from "lucide-react";
+import { MessageCircle, Send, Loader2, ArrowLeft, Users, Paperclip, Image, Mic, X, FileText, CheckCheck, Check as CheckIcon } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import ChatProfilePanel from "./ChatProfilePanel";
@@ -23,6 +23,9 @@ interface Message {
   sender_id: string;
   content: string;
   created_at: string;
+  attachment_url: string | null;
+  attachment_type: string | null;
+  attachment_name: string | null;
 }
 
 interface RoomMeta {
@@ -48,7 +51,15 @@ const Messages = () => {
   const [participants, setParticipants] = useState<Record<string, any>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [profileOpen, setProfileOpen] = useState(false);
-  // Fetch rooms + metadata (other user name for private chats, last message)
+  const [readReceipts, setReadReceipts] = useState<Record<string, string[]>>({});
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  // Fetch rooms + metadata
   useEffect(() => {
     if (!user) return;
     const fetchRooms = async () => {
@@ -72,10 +83,8 @@ const Messages = () => {
       const fetchedRooms = (roomsData as any) || [];
       setRooms(fetchedRooms);
 
-      // Build metadata for each room
       const meta: Record<string, RoomMeta> = {};
       for (const room of fetchedRooms) {
-        // Get last message
         const { data: lastMsgs } = await supabase
           .from("messages")
           .select("content, created_at")
@@ -110,7 +119,6 @@ const Messages = () => {
               ? profile?.avatar_url || brand?.logo_url || null
               : brand?.logo_url || profile?.avatar_url || null;
           } else if (room.campaign_id) {
-            // No other participant — resolve name from campaign
             const { data: campaign } = await supabase.from("campaigns").select("brand_user_id, title").eq("id", room.campaign_id).maybeSingle();
             if (campaign) {
               if (isBrandView) {
@@ -141,7 +149,6 @@ const Messages = () => {
         }
       }
 
-      // Sort rooms by last message time
       fetchedRooms.sort((a: ChatRoom, b: ChatRoom) => {
         const timeA = new Date(meta[a.id]?.lastMessageTime || a.created_at).getTime();
         const timeB = new Date(meta[b.id]?.lastMessageTime || b.created_at).getTime();
@@ -155,6 +162,7 @@ const Messages = () => {
     fetchRooms();
   }, [isBrandView, user]);
 
+  // Fetch messages + participants + read receipts when room selected
   useEffect(() => {
     if (!selectedRoom || !user) return;
 
@@ -163,7 +171,8 @@ const Messages = () => {
         supabase.from("messages").select("*").eq("chat_room_id", selectedRoom.id).order("created_at", { ascending: true }),
         supabase.from("chat_participants").select("user_id").eq("chat_room_id", selectedRoom.id),
       ]);
-      setMessages((msgsRes.data as any) || []);
+      const msgs = (msgsRes.data as any) || [];
+      setMessages(msgs);
 
       if (partRes.data) {
         const userIds = partRes.data.map((p: any) => p.user_id);
@@ -172,6 +181,32 @@ const Messages = () => {
           const map: Record<string, any> = {};
           profiles.forEach((p: any) => { map[p.user_id] = p; });
           setParticipants(map);
+        }
+      }
+
+      // Fetch read receipts
+      if (msgs.length > 0) {
+        const msgIds = msgs.map((m: any) => m.id);
+        const { data: reads } = await supabase.from("message_reads" as any).select("message_id, user_id").in("message_id", msgIds);
+        if (reads) {
+          const readMap: Record<string, string[]> = {};
+          (reads as any[]).forEach((r: any) => {
+            if (!readMap[r.message_id]) readMap[r.message_id] = [];
+            readMap[r.message_id].push(r.user_id);
+          });
+          setReadReceipts(readMap);
+        }
+      }
+
+      // Mark unread messages as read
+      const unreadMsgs = msgs.filter((m: any) => m.sender_id !== user.id);
+      if (unreadMsgs.length > 0) {
+        const existingReads = new Set<string>();
+        const { data: myReads } = await supabase.from("message_reads" as any).select("message_id").eq("user_id", user.id).in("message_id", unreadMsgs.map((m: any) => m.id));
+        (myReads || []).forEach((r: any) => existingReads.add(r.message_id));
+        const toInsert = unreadMsgs.filter((m: any) => !existingReads.has(m.id)).map((m: any) => ({ message_id: m.id, user_id: user.id }));
+        if (toInsert.length > 0) {
+          await supabase.from("message_reads" as any).insert(toInsert);
         }
       }
     };
@@ -185,7 +220,23 @@ const Messages = () => {
         table: "messages",
         filter: `chat_room_id=eq.${selectedRoom.id}`,
       }, (payload) => {
-        setMessages((prev) => [...prev, payload.new as Message]);
+        const newMsg = payload.new as Message;
+        setMessages((prev) => [...prev, newMsg]);
+        // Auto mark as read if not from me
+        if (newMsg.sender_id !== user.id) {
+          supabase.from("message_reads" as any).insert({ message_id: newMsg.id, user_id: user.id }).then();
+        }
+      })
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "message_reads",
+      }, (payload) => {
+        const read = payload.new as any;
+        setReadReceipts((prev) => ({
+          ...prev,
+          [read.message_id]: [...(prev[read.message_id] || []), read.user_id],
+        }));
       })
       .subscribe();
 
@@ -196,15 +247,83 @@ const Messages = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) return;
+    setAttachmentFile(file);
+    if (file.type.startsWith("image/")) {
+      const url = URL.createObjectURL(file);
+      setAttachmentPreview(url);
+    } else {
+      setAttachmentPreview(null);
+    }
+  };
+
+  const clearAttachment = () => {
+    setAttachmentFile(null);
+    setAttachmentPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => { audioChunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const file = new File([blob], `voice-${Date.now()}.webm`, { type: "audio/webm" });
+        setAttachmentFile(file);
+        setAttachmentPreview(null);
+        stream.getTracks().forEach((t) => t.stop());
+      };
+      recorder.start();
+      setMediaRecorder(recorder);
+      setRecording(true);
+    } catch {
+      // Microphone permission denied
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorder?.stop();
+    setRecording(false);
+    setMediaRecorder(null);
+  };
+
+  const uploadAttachment = async (file: File): Promise<{ url: string; type: string; name: string } | null> => {
+    const path = `${user!.id}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from("chat-attachments").upload(path, file);
+    if (error) return null;
+    const { data: { publicUrl } } = supabase.storage.from("chat-attachments").getPublicUrl(path);
+    let type = "file";
+    if (file.type.startsWith("image/")) type = "image";
+    else if (file.type.startsWith("audio/")) type = "voice";
+    return { url: publicUrl, type, name: file.name };
+  };
+
   const handleSend = async () => {
-    if (!newMessage.trim() || !user || !selectedRoom) return;
+    if ((!newMessage.trim() && !attachmentFile) || !user || !selectedRoom) return;
     setSending(true);
+
+    let attachment: { url: string; type: string; name: string } | null = null;
+    if (attachmentFile) {
+      attachment = await uploadAttachment(attachmentFile);
+    }
+
     await supabase.from("messages").insert({
       chat_room_id: selectedRoom.id,
       sender_id: user.id,
-      content: newMessage.trim(),
+      content: newMessage.trim() || (attachment?.type === "image" ? "📷 Photo" : attachment?.type === "voice" ? "🎤 Voice message" : `📎 ${attachment?.name || "File"}`),
+      attachment_url: attachment?.url || null,
+      attachment_type: attachment?.type || null,
+      attachment_name: attachment?.name || null,
     } as any);
+
     setNewMessage("");
+    clearAttachment();
     setSending(false);
   };
 
@@ -235,6 +354,65 @@ const Messages = () => {
     return d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
   };
 
+  const getReadStatus = (msg: Message) => {
+    if (msg.sender_id !== user?.id) return null;
+    const readers = readReceipts[msg.id] || [];
+    const otherReaders = readers.filter((uid) => uid !== user?.id);
+    if (otherReaders.length > 0) return "read";
+    return "sent";
+  };
+
+  const renderAttachment = (msg: Message) => {
+    if (!msg.attachment_url) return null;
+    const isMe = msg.sender_id === user?.id;
+
+    if (msg.attachment_type === "image") {
+      return (
+        <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer">
+          <img src={msg.attachment_url} alt={msg.attachment_name || "Image"} className="rounded-lg max-w-[240px] max-h-[200px] object-cover mt-1" />
+        </a>
+      );
+    }
+    if (msg.attachment_type === "voice") {
+      return (
+        <audio controls className="mt-1 max-w-[240px]" preload="metadata">
+          <source src={msg.attachment_url} type="audio/webm" />
+        </audio>
+      );
+    }
+    return (
+      <a
+        href={msg.attachment_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(
+          "flex items-center gap-2 mt-1 px-2 py-1.5 rounded-lg text-xs",
+          isMe ? "bg-primary-foreground/10" : "bg-secondary"
+        )}
+      >
+        <FileText className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate max-w-[160px]">{msg.attachment_name || "File"}</span>
+      </a>
+    );
+  };
+
+  // URL detection and rendering
+  const renderContent = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, i) => {
+      if (urlRegex.test(part)) {
+        urlRegex.lastIndex = 0;
+        return (
+          <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline break-all hover:opacity-80">
+            {part}
+          </a>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-[calc(100vh-5rem)]"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -246,16 +424,14 @@ const Messages = () => {
           <MessageCircle className="h-10 w-10 text-muted-foreground" />
         </div>
         <h3 className="text-lg font-heading font-semibold text-foreground mb-1">No messages yet</h3>
-        <p className="text-muted-foreground text-sm max-w-xs">
-          Messages will appear here once you're part of a campaign.
-        </p>
+        <p className="text-muted-foreground text-sm max-w-xs">Messages will appear here once you're part of a campaign.</p>
       </div>
     );
   }
 
   return (
     <div className="flex h-[calc(100vh-5rem)] border border-border/50 rounded-xl overflow-hidden bg-card/30">
-      {/* Conversation List - left sidebar */}
+      {/* Conversation List */}
       <div className={cn(
         "w-80 border-r border-border/50 flex flex-col bg-card/50",
         selectedRoom ? "hidden md:flex" : "flex w-full md:w-80"
@@ -309,10 +485,10 @@ const Messages = () => {
         </div>
       </div>
 
-      {/* Chat panel - right side */}
+      {/* Chat panel */}
       {selectedRoom ? (
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Chat header */}
+          {/* Header - clickable */}
           <div className="px-4 py-3 border-b border-border/30 flex items-center gap-3 bg-card/50">
             <Button variant="ghost" size="icon" className="md:hidden shrink-0 h-8 w-8" onClick={() => setSelectedRoom(null)}>
               <ArrowLeft className="h-4 w-4" />
@@ -355,6 +531,7 @@ const Messages = () => {
               const displayContent = msg.content.replace(/\[CAMPAIGN_INVITE:[^\]]+\]/, "").trim();
               const showAvatar = !isMe && (idx === messages.length - 1 || messages[idx + 1]?.sender_id !== msg.sender_id);
               const isConsecutive = idx > 0 && messages[idx - 1].sender_id === msg.sender_id && !shouldShowDateSeparator(idx);
+              const readStatus = getReadStatus(msg);
 
               return (
                 <div key={msg.id}>
@@ -394,7 +571,10 @@ const Messages = () => {
                           ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
                           : "bg-secondary text-foreground rounded-2xl rounded-bl-md"
                       )}>
-                        <p className="whitespace-pre-wrap break-words">{displayContent}</p>
+                        {displayContent && (
+                          <p className="whitespace-pre-wrap break-words">{renderContent(displayContent)}</p>
+                        )}
+                        {renderAttachment(msg)}
                         {inviteMatch && !isMe && (
                           <Button
                             size="sm"
@@ -406,9 +586,18 @@ const Messages = () => {
                           </Button>
                         )}
                       </div>
-                      <span className="text-[10px] text-muted-foreground mt-0.5 mx-1">
-                        {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </span>
+                      <div className="flex items-center gap-1 mt-0.5 mx-1">
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        {isMe && readStatus && (
+                          readStatus === "read" ? (
+                            <CheckCheck className="h-3 w-3 text-primary" />
+                          ) : (
+                            <CheckCheck className="h-3 w-3 text-muted-foreground" />
+                          )
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -417,24 +606,59 @@ const Messages = () => {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Attachment preview */}
+          {attachmentFile && (
+            <div className="px-4 py-2 border-t border-border/30 bg-secondary/30 flex items-center gap-3">
+              {attachmentPreview ? (
+                <img src={attachmentPreview} alt="Preview" className="h-12 w-12 rounded-lg object-cover" />
+              ) : (
+                <div className="h-12 w-12 rounded-lg bg-secondary flex items-center justify-center">
+                  {attachmentFile.type.startsWith("audio/") ? <Mic className="h-5 w-5 text-muted-foreground" /> : <FileText className="h-5 w-5 text-muted-foreground" />}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-foreground truncate">{attachmentFile.name}</p>
+                <p className="text-xs text-muted-foreground">{(attachmentFile.size / 1024).toFixed(0)} KB</p>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={clearAttachment}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
           {/* Message input */}
           <div className="px-4 py-3 border-t border-border/30 bg-card/50 flex items-center gap-2">
+            <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} accept="image/*,.pdf,.doc,.docx,.txt,.zip" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => fileInputRef.current?.click()} title="Attach file">
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("h-9 w-9 shrink-0", recording && "text-destructive animate-pulse")}
+              onClick={recording ? stopRecording : startRecording}
+              title={recording ? "Stop recording" : "Voice message"}
+            >
+              <Mic className="h-4 w-4" />
+            </Button>
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Message..."
+              placeholder={recording ? "Recording..." : "Message..."}
               className="rounded-full bg-secondary/50 border-border/30 focus-visible:ring-primary/30"
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              disabled={recording}
             />
             <Button
               size="icon"
               className="rounded-full h-10 w-10 shrink-0"
               onClick={handleSend}
-              disabled={sending || !newMessage.trim()}
+              disabled={sending || (!newMessage.trim() && !attachmentFile)}
             >
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
+
           {selectedRoom && (
             <ChatProfilePanel
               open={profileOpen}

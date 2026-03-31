@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Briefcase, Clock, DollarSign, MapPin, Send, Loader2, Check, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,6 +40,7 @@ const Gigs = () => {
   const [activeMemberships, setActiveMemberships] = useState<any[]>([]);
   const [leavingCampaign, setLeavingCampaign] = useState<any>(null);
   const [leavingLoading, setLeavingLoading] = useState(false);
+  const [brandProfiles, setBrandProfiles] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,6 +49,17 @@ const Gigs = () => {
         user ? supabase.from("campaign_applications").select("*").eq("creator_user_id", user.id) : Promise.resolve({ data: [] }),
       ]);
       setCampaigns((campaignsRes.data as any) || []);
+      
+      // Fetch brand profiles for all campaigns
+      const allCampaigns = (campaignsRes.data as any) || [];
+      const brandUserIds = [...new Set(allCampaigns.map((c: any) => c.brand_user_id))] as string[];
+      if (brandUserIds.length > 0) {
+        const { data: brands } = await supabase.from("brand_profiles").select("user_id, business_name, logo_url").in("user_id", brandUserIds);
+        const brandMap: Record<string, any> = {};
+        (brands || []).forEach((b: any) => { brandMap[b.user_id] = b; });
+        setBrandProfiles(brandMap);
+      }
+
       const allApps = (applicationsRes.data as any) || [];
       setAppliedCampaigns(new Set(allApps.map((a: any) => a.campaign_id)));
 
@@ -203,8 +216,19 @@ const Gigs = () => {
             const hasApplied = appliedCampaigns.has(campaign.id);
             return (
               <Card key={campaign.id} className="border-border/50 hover:border-primary/30 transition-colors cursor-pointer" onClick={() => setSelectedCampaign(campaign)}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{campaign.title}</CardTitle>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Avatar className="h-10 w-10 shrink-0 ring-2 ring-border/30">
+                      <AvatarImage src={brandProfiles[campaign.brand_user_id]?.logo_url || undefined} />
+                      <AvatarFallback className="bg-secondary text-sm">
+                        {(brandProfiles[campaign.brand_user_id]?.business_name || "B").charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-lg truncate">{campaign.title}</CardTitle>
+                      <p className="text-xs text-muted-foreground">{brandProfiles[campaign.brand_user_id]?.business_name || "Brand"}</p>
+                    </div>
+                  </div>
                   {campaign.platforms && campaign.platforms.length > 0 && (
                     <div className="flex gap-1 flex-wrap">
                       {campaign.platforms.map((p) => (
