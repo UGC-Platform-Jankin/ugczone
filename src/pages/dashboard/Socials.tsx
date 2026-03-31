@@ -149,6 +149,25 @@ const Socials = () => {
         <p className="text-muted-foreground mt-1">Link your social media accounts to showcase your reach</p>
       </div>
 
+      {connections.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+          {[
+            { label: "Total Followers", icon: Users, value: connections.reduce((sum, c) => sum + (c.followers_count || 0), 0) },
+            { label: "Total Following", icon: UserPlus, value: connections.reduce((sum, c) => sum + (c.following_count || 0), 0) },
+            { label: "Avg Views", icon: Eye, value: connections.length ? Math.round(connections.reduce((sum, c) => sum + (c.average_views || 0), 0) / connections.length) : 0 },
+            { label: "Total Videos", icon: Video, value: connections.reduce((sum, c) => sum + (c.video_count || 0), 0) },
+          ].map((stat) => (
+            <Card key={stat.label} className="border-border/50">
+              <CardContent className="p-4 flex flex-col items-center text-center gap-1">
+                <stat.icon className="h-5 w-5 text-primary mb-1" />
+                <span className="text-2xl font-heading font-bold text-foreground">{formatNumber(stat.value)}</span>
+                <span className="text-xs text-muted-foreground">{stat.label}</span>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       <div className="grid gap-6">
         {(Object.keys(platformConfig) as Array<keyof typeof platformConfig>).map((platform) => {
           const config = platformConfig[platform];
