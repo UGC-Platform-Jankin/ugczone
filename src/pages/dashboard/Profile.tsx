@@ -168,6 +168,33 @@ const Profile = () => {
     }
   };
 
+  const handleAddCollaboration = async () => {
+    if (!user || !newCollabBrand.trim()) return;
+    setSavingCollab(true);
+    const { data, error } = await supabase.from("past_collaborations" as any).insert({
+      user_id: user.id,
+      brand_name: newCollabBrand.trim(),
+      description: newCollabDesc.trim() || null,
+    }).select().single();
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setCollaborations((prev) => [data, ...prev]);
+      setNewCollabBrand("");
+      setNewCollabDesc("");
+      toast({ title: "Collaboration added!" });
+    }
+    setSavingCollab(false);
+  };
+
+  const handleRemoveCollaboration = async (id: string) => {
+    const { error } = await supabase.from("past_collaborations" as any).delete().eq("id", id);
+    if (!error) {
+      setCollaborations((prev) => prev.filter((c) => c.id !== id));
+      toast({ title: "Removed" });
+    }
+  };
+
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
       toast({ title: "Passwords don't match", variant: "destructive" });
