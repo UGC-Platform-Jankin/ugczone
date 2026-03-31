@@ -49,6 +49,12 @@ const Profile = () => {
   });
   const [socialIds, setSocialIds] = useState<Record<string, string>>({});
 
+  // Past collaborations
+  const [collaborations, setCollaborations] = useState<any[]>([]);
+  const [newCollabBrand, setNewCollabBrand] = useState("");
+  const [newCollabDesc, setNewCollabDesc] = useState("");
+  const [savingCollab, setSavingCollab] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
