@@ -19,6 +19,7 @@ import BrandDashboard from "./pages/brand/BrandDashboard.tsx";
 import CreateCampaign from "./pages/brand/CreateCampaign.tsx";
 import BrandProfileContent from "./pages/brand/BrandProfile.tsx";
 import BrandCampaigns from "./pages/brand/BrandCampaigns.tsx";
+import FindCreators from "./pages/brand/FindCreators.tsx";
 
 const queryClient = new QueryClient();
 
