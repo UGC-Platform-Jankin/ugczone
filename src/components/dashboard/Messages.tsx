@@ -245,7 +245,7 @@ const Messages = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] border border-border/50 rounded-xl overflow-hidden bg-card/30">
+    <div className="flex h-[calc(100vh-5rem)] border border-border/50 rounded-xl overflow-hidden bg-card/30">
       {/* Conversation List - left sidebar */}
       <div className={cn(
         "w-80 border-r border-border/50 flex flex-col bg-card/50",
