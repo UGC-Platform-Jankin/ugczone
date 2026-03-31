@@ -25,7 +25,7 @@ const GetStarted = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Link to="/auth" className="block group">
+            <Link to="/auth?mode=signup" className="block group">
               <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card p-8 h-full transition-all duration-300 hover:border-primary/50 hover:shadow-[var(--shadow-glow)]">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="relative z-10">
