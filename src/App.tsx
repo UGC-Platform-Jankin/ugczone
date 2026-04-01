@@ -28,6 +28,8 @@ import BrandPostedVideos from "./pages/brand/BrandPostedVideos.tsx";
 import ReviewsPage from "./pages/Reviews.tsx";
 import AdminPanel from "./pages/dashboard/AdminPanel.tsx";
 import AboutPage from "./pages/AboutPage.tsx";
+import PrivacyPage from "./pages/PrivacyPage.tsx";
+import TermsPage from "./pages/TermsPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +46,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/reviews" element={<ReviewsPage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
             <Route path="/dashboard" element={<DashboardLayout><Gigs /></DashboardLayout>} />
             <Route path="/dashboard/messages" element={<DashboardLayout><Messages /></DashboardLayout>} />
             <Route path="/dashboard/profile" element={<DashboardLayout><Profile /></DashboardLayout>} />
