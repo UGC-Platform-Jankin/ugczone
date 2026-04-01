@@ -91,7 +91,7 @@ const Hero = () => {
                 </motion.span>
               </h1>
 
-              <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
+              <p className="text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
                 The all-in-one platform to launch UGC campaigns, manage creators, review content and handle payments, all in one place.
               </p>
 
