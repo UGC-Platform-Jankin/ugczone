@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import founderImage from "@/assets/founder-jankin.jpg";
-import platformImage from "@/assets/platform-dashboard.jpg";
 
 const AboutPage = () => {
   return (
