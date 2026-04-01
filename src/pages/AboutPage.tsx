@@ -138,21 +138,6 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* Platform image */}
-      <section className="pb-24">
-        <div className="container max-w-5xl">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="rounded-2xl overflow-hidden border border-border shadow-glow"
-          >
-            <img src={platformImage} alt="UGC Zone platform" loading="lazy" width={1280} height={720} className="w-full h-auto" />
-          </motion.div>
-        </div>
-      </section>
-
       {/* CTA */}
       <section className="pb-32">
         <div className="container max-w-3xl text-center">
