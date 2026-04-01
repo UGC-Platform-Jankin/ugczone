@@ -1,15 +1,11 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Sparkles, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Play, Sparkles, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRef } from "react";
-import heroImage from "@/assets/hero-abstract.jpg";
+
 import heroBg from "@/assets/hero-bg.jpg";
 
-const floatingStats = [
-  { label: "Campaign ROI", value: "+340%", delay: 0 },
-  { label: "Active Creators", value: "Growing", delay: 2 },
-];
 
 const Hero = () => {
   const ref = useRef<HTMLElement>(null);
@@ -58,7 +54,7 @@ const Hero = () => {
       ))}
 
       <div className="container relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="max-w-3xl mx-auto text-center">
           <motion.div style={{ y: textY }}>
             <motion.div
               initial={{ opacity: 0, y: 40 }}
@@ -91,11 +87,11 @@ const Hero = () => {
                 </motion.span>
               </h1>
 
-              <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
+              <p className="text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
                 The all-in-one platform to launch UGC campaigns, manage creators, review content and handle payments, all in one place.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
                   <Button size="lg" className="bg-gradient-coral text-primary-foreground hover:opacity-90 transition-opacity gap-2 text-base px-8 h-12 shadow-glow" asChild>
                     <Link to="/get-started">Start Free <ArrowRight className="h-4 w-4" /></Link>
@@ -113,7 +109,7 @@ const Hero = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1 }}
-                className="flex items-center gap-6 pt-4"
+                className="flex items-center justify-center gap-6 pt-4"
               >
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Sparkles className="h-4 w-4 text-primary" />
@@ -127,46 +123,6 @@ const Hero = () => {
             </motion.div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-            className="relative hidden lg:block"
-          >
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              transition={{ type: "spring", stiffness: 300 }}
-              className="relative rounded-2xl overflow-hidden border border-border shadow-glow"
-            >
-              <img src={heroImage} alt="UGC campaign platform dashboard" className="w-full h-auto" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
-            </motion.div>
-
-            {/* Floating stats cards */}
-            <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute -bottom-6 -left-6 rounded-xl border border-border bg-card p-4 shadow-glow backdrop-blur-sm"
-            >
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                <p className="text-xs text-muted-foreground">Campaign ROI</p>
-              </div>
-              <p className="text-2xl font-heading font-bold text-gradient">+340%</p>
-            </motion.div>
-
-            <motion.div
-              animate={{ y: [0, 8, 0] }}
-              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              className="absolute -top-4 -right-4 rounded-xl border border-border bg-card p-4 shadow-glow backdrop-blur-sm"
-            >
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" />
-                <p className="text-xs text-muted-foreground">Active Creators</p>
-              </div>
-              <p className="text-lg font-heading font-bold text-foreground">Growing Daily</p>
-            </motion.div>
-          </motion.div>
         </div>
       </div>
 
