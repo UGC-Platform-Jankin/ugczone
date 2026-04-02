@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageCircle, Send, Loader2, ArrowLeft, Users, Paperclip, Image, Mic, X, FileText, CheckCheck, Check as CheckIcon } from "lucide-react";
+import { MessageCircle, Send, Loader2, ArrowLeft, Users, Paperclip, Image, Mic, X, FileText, CheckCheck, Check as CheckIcon, Download, Play, Pause } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import ChatProfilePanel from "./ChatProfilePanel";
