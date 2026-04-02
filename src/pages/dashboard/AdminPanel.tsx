@@ -242,7 +242,7 @@ const AdminPanel = () => {
                   </option>
                 ))}
               </select>
-              <Input placeholder="Headline (e.g. Food & Lifestyle Creator)" value={spotlightHeadline} onChange={(e) => setSpotlightHeadline(e.target.value)} className="bg-secondary" />
+              <Button onClick={addSpotlight} disabled={!selectedCreator} className="bg-gradient-coral text-primary-foreground gap-2">
               <Button onClick={addSpotlight} disabled={!selectedCreator} className="bg-gradient-coral text-primary-foreground gap-2">
                 <Plus className="h-4 w-4" /> Add to Spotlight
               </Button>
