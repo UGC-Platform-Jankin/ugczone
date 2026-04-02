@@ -139,10 +139,12 @@ const BrandCampaigns = () => {
           } else {
             groupRoomId = newGroup.id;
             await supabase.from("chat_participants").insert({ chat_room_id: groupRoomId, user_id: user.id } as any);
+            // Pinned welcome message
             await supabase.from("messages").insert({
               chat_room_id: groupRoomId,
               sender_id: user.id,
               content: `Welcome to the ${selectedCampaign.title} campaign group chat. This space is for the brand and accepted creators to coordinate together.`,
+              pinned: true,
             } as any);
           }
         } else {
@@ -151,10 +153,11 @@ const BrandCampaigns = () => {
 
         if (groupRoomId) {
           await supabase.from("chat_participants").upsert({ chat_room_id: groupRoomId, user_id: app.creator_user_id } as any, { onConflict: "chat_room_id,user_id" });
+          // System join message in group chat
           await supabase.from("messages").insert({
             chat_room_id: groupRoomId,
             sender_id: user.id,
-            content: `${app._profile?.display_name || app._profile?.username || "A creator"} has joined the campaign group chat.`,
+            content: `📥 ${app._profile?.display_name || app._profile?.username || "A creator"} joined the chat`,
           } as any);
         }
       }
