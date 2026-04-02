@@ -248,37 +248,40 @@ const Gigs = () => {
         activeMemberships.length === 0 ? (
           <EmptyState icon={Check} title="No active campaigns" subtitle="Campaigns you've been accepted to will appear here" />
         ) : (
-          <div className="space-y-3">
-            {activeMemberships.map((m) => (
-              <div key={m.id} className="rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-md">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-coral flex items-center justify-center shrink-0">
-                      <Video className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-heading font-bold text-foreground">{m._campaign.title}</h3>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-muted-foreground">
-                          {m.videos_delivered || 0}/{m._campaign.expected_video_count} videos
-                        </span>
-                        <Badge className="bg-primary/10 text-primary border-0 text-[11px] font-bold uppercase tracking-wide">
-                          Active
-                        </Badge>
+          <div className="space-y-4">
+            <ActiveGigHub />
+            <div className="space-y-3">
+              {activeMemberships.map((m) => (
+                <div key={m.id} className="rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-md">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-xl bg-gradient-coral flex items-center justify-center shrink-0">
+                        <Video className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-heading font-bold text-foreground">{m._campaign.title}</h3>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            {m.videos_delivered || 0}/{m._campaign.expected_video_count} videos
+                          </span>
+                          <Badge className="bg-primary/10 text-primary border-0 text-[11px] font-bold uppercase tracking-wide">
+                            Active
+                          </Badge>
+                        </div>
                       </div>
                     </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 rounded-full"
+                      onClick={() => setLeavingCampaign(m)}
+                    >
+                      <LogOut className="h-3.5 w-3.5" /> Leave
+                    </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 rounded-full"
-                    onClick={() => setLeavingCampaign(m)}
-                  >
-                    <LogOut className="h-3.5 w-3.5" /> Leave
-                  </Button>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )
       ) : filteredCampaigns.length === 0 ? (
