@@ -633,7 +633,7 @@ const Messages = () => {
                         "px-3 py-2 text-sm leading-relaxed max-w-full",
                         isMe
                           ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
-                          : "bg-secondary text-foreground rounded-2xl rounded-bl-md"
+                          : "bg-muted text-foreground rounded-2xl rounded-bl-md"
                       )}>
                         {displayContent && (
                           <p className="whitespace-pre-wrap break-words">{renderContent(displayContent)}</p>
