@@ -412,25 +412,40 @@ const Messages = () => {
       );
     }
     if (msg.attachment_type === "voice") {
-      return (
-        <audio controls className="mt-1 max-w-[240px]" preload="metadata">
-          <source src={msg.attachment_url} type="audio/webm" />
-        </audio>
-      );
+      return <VoiceMessage url={msg.attachment_url} isMe={isMe} />;
     }
+    // File attachment - downloadable
+    const fileSize = msg.attachment_name || "File";
+    const ext = fileSize.split(".").pop()?.toUpperCase() || "FILE";
     return (
-      <a
-        href={msg.attachment_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={cn(
-          "flex items-center gap-2 mt-1 px-2 py-1.5 rounded-lg text-xs",
-          isMe ? "bg-primary-foreground/10" : "bg-secondary"
-        )}
-      >
-        <FileText className="h-3.5 w-3.5 shrink-0" />
-        <span className="truncate max-w-[160px]">{msg.attachment_name || "File"}</span>
-      </a>
+      <div className={cn(
+        "flex items-center gap-3 mt-1 px-3 py-2.5 rounded-xl text-sm min-w-[200px]",
+        isMe ? "bg-primary-foreground/10" : "bg-secondary/80"
+      )}>
+        <div className={cn(
+          "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
+          isMe ? "bg-primary-foreground/20" : "bg-primary/10"
+        )}>
+          <FileText className={cn("h-5 w-5", isMe ? "text-primary-foreground" : "text-primary")} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={cn("text-xs font-medium truncate", isMe ? "text-primary-foreground" : "text-foreground")}>{msg.attachment_name || "File"}</p>
+          <p className={cn("text-[10px]", isMe ? "text-primary-foreground/60" : "text-muted-foreground")}>{ext}</p>
+        </div>
+        <a
+          href={msg.attachment_url}
+          download={msg.attachment_name || "file"}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            "h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition-colors",
+            isMe ? "bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground" : "bg-primary/10 hover:bg-primary/20 text-primary"
+          )}
+        >
+          <Download className="h-4 w-4" />
+        </a>
+      </div>
     );
   };
 
