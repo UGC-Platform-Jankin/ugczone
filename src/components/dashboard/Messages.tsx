@@ -37,6 +37,71 @@ interface RoomMeta {
   unreadCount: number;
 }
 
+// WhatsApp-style voice message player
+const VoiceMessage = ({ url, isMe }: { url: string; isMe: boolean }) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const toggle = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) { audio.pause(); } else { audio.play(); }
+    setPlaying(!playing);
+  };
+
+  const formatDur = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  return (
+    <div className={cn(
+      "flex items-center gap-2.5 mt-1 px-3 py-2 rounded-2xl min-w-[200px] max-w-[260px]",
+      isMe ? "bg-primary-foreground/10" : "bg-secondary/80"
+    )}>
+      <audio
+        ref={audioRef}
+        src={url}
+        preload="metadata"
+        onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
+        onTimeUpdate={() => {
+          const a = audioRef.current;
+          if (a && a.duration) setProgress((a.currentTime / a.duration) * 100);
+        }}
+        onEnded={() => { setPlaying(false); setProgress(0); }}
+      />
+      <button
+        onClick={toggle}
+        className={cn(
+          "h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-colors",
+          isMe ? "bg-primary-foreground/20 hover:bg-primary-foreground/30" : "bg-primary/10 hover:bg-primary/20"
+        )}
+      >
+        {playing ? (
+          <Pause className={cn("h-4 w-4", isMe ? "text-primary-foreground" : "text-primary")} />
+        ) : (
+          <Play className={cn("h-4 w-4 ml-0.5", isMe ? "text-primary-foreground" : "text-primary")} />
+        )}
+      </button>
+      <div className="flex-1 min-w-0">
+        {/* Progress bar */}
+        <div className={cn("h-1.5 rounded-full w-full", isMe ? "bg-primary-foreground/20" : "bg-border")}>
+          <div
+            className={cn("h-full rounded-full transition-all duration-100", isMe ? "bg-primary-foreground/60" : "bg-primary")}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <p className={cn("text-[10px] mt-1", isMe ? "text-primary-foreground/60" : "text-muted-foreground")}>
+          {duration > 0 ? formatDur(playing ? (audioRef.current?.currentTime || 0) : duration) : "0:00"}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const Messages = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
