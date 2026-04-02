@@ -79,6 +79,8 @@ const Profile = () => {
         setBio(profileRes.data.bio || "");
         setAvatarUrl(profileRes.data.avatar_url || "");
         setContentTypes((profileRes.data as any).content_types || []);
+        setGender((profileRes.data as any).gender || "");
+        setCountry((profileRes.data as any).country || "");
       }
       if (socialsRes.data) {
         const newForms: Record<string, SocialForm> = { instagram: { ...emptyForm }, facebook: { ...emptyForm }, tiktok: { ...emptyForm } };
