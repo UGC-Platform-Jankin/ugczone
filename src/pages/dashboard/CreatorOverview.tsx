@@ -2,68 +2,75 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Briefcase, MessageCircle, Video, Mail, TrendingUp, Clock } from "lucide-react";
-import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Briefcase, Loader2, Sparkles, Gift, DollarSign, MapPin, Video } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAIMatch } from "@/hooks/useAIMatch";
 
 const CreatorOverview = () => {
   const { user } = useAuth();
-  const unread = useUnreadMessages();
-  const [stats, setStats] = useState({
-    activeGigs: 0,
-    pendingApps: 0,
-    acceptedApps: 0,
-    pendingVideos: 0,
-    acceptedVideos: 0,
-    rejectedVideos: 0,
-    invites: 0,
-  });
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [brandProfiles, setBrandProfiles] = useState<Record<string, any>>({});
+  const [dataReady, setDataReady] = useState(false);
 
   useEffect(() => {
     if (!user) return;
 
-    // Fetch applications
-    supabase.from("campaign_applications").select("id, status, campaign_id, created_at").eq("creator_user_id", user.id).then(({ data }) => {
-      const apps = data || [];
-      setStats(s => ({
-        ...s,
-        pendingApps: apps.filter(a => a.status === "pending").length,
-        acceptedApps: apps.filter(a => a.status === "accepted").length,
-        activeGigs: apps.filter(a => a.status === "accepted").length,
-      }));
-    });
+    const load = async () => {
+      const [profileRes, socialsRes, campaignsRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("social_connections").select("platform, followers_count").eq("user_id", user.id),
+        supabase.from("campaigns").select("*").eq("status", "active").order("created_at", { ascending: false }),
+      ]);
 
-    // Fetch video submissions
-    supabase.from("video_submissions").select("id, status, title, created_at").eq("creator_user_id", user.id).then(({ data }) => {
-      const vids = data || [];
-      setStats(s => ({
-        ...s,
-        pendingVideos: vids.filter(v => v.status === "pending").length,
-        acceptedVideos: vids.filter(v => v.status === "accepted").length,
-        rejectedVideos: vids.filter(v => v.status === "rejected").length,
-      }));
-    });
+      const p = profileRes.data;
+      const socials = socialsRes.data || [];
+      const platforms = [...new Set(socials.map((s: any) => s.platform))];
+      const followers = socials.reduce((sum: number, s: any) => sum + (s.followers_count || 0), 0);
 
-    // Fetch invites
-    supabase.from("campaign_invites").select("id").eq("creator_user_id", user.id).eq("status", "pending").then(({ data }) => {
-      setStats(s => ({ ...s, invites: (data || []).length }));
-    });
+      setProfile({ ...p, platforms, followers });
+      setCampaigns((campaignsRes.data as any) || []);
 
-    // Recent notifications as activity
-    supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5).then(({ data }) => {
-      setRecentActivity(data || []);
-    });
+      const allCampaigns = (campaignsRes.data as any) || [];
+      const brandIds = [...new Set(allCampaigns.map((c: any) => c.brand_user_id))] as string[];
+      if (brandIds.length > 0) {
+        const { data: brands } = await supabase.from("brand_profiles").select("user_id, business_name, logo_url").in("user_id", brandIds);
+        const map: Record<string, any> = {};
+        (brands || []).forEach((b: any) => { map[b.user_id] = b; });
+        setBrandProfiles(map);
+      }
+      setDataReady(true);
+    };
+    load();
   }, [user]);
 
-  const statCards = [
-    { label: "Unread Messages", value: unread.total, icon: MessageCircle, color: "text-blue-500", link: "/dashboard/messages" },
-    { label: "Active Gigs", value: stats.activeGigs, icon: Briefcase, color: "text-emerald-500", link: "/dashboard/gigs" },
-    { label: "Pending Invites", value: stats.invites, icon: Mail, color: "text-amber-500", link: "/dashboard/gigs" },
-    { label: "Videos Pending", value: stats.pendingVideos, icon: Video, color: "text-purple-500", link: "/dashboard/videos" },
-    { label: "Videos Accepted", value: stats.acceptedVideos, icon: TrendingUp, color: "text-emerald-500", link: "/dashboard/videos" },
-    { label: "Pending Applications", value: stats.pendingApps, icon: Clock, color: "text-orange-500", link: "/dashboard/gigs" },
-  ];
+  const matchItems = campaigns.map(c => ({
+    id: c.id,
+    title: c.title,
+    description: c.description,
+    platforms: c.platforms,
+    target_regions: c.target_regions,
+    requirements: c.requirements,
+  }));
+
+  const { matches, loading: matchLoading } = useAIMatch(
+    "creator_to_campaigns",
+    profile,
+    matchItems,
+    dataReady && !!profile && campaigns.length > 0
+  );
+
+  const sortedCampaigns = [...campaigns].sort((a, b) => (matches[b.id] || 0) - (matches[a.id] || 0));
+  const topMatches = sortedCampaigns.filter(c => (matches[c.id] || 0) > 0).slice(0, 6);
+
+  const getMatchColor = (pct: number) => {
+    if (pct >= 80) return "bg-emerald-500/15 text-emerald-600 border-emerald-500/30";
+    if (pct >= 60) return "bg-amber-500/15 text-amber-600 border-amber-500/30";
+    if (pct >= 40) return "bg-orange-500/15 text-orange-600 border-orange-500/30";
+    return "bg-muted text-muted-foreground border-border";
+  };
 
   return (
     <div className="space-y-6">
@@ -72,45 +79,87 @@ const CreatorOverview = () => {
         <p className="text-sm text-muted-foreground mt-1">Here's what's happening with your creator account</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {statCards.map((stat) => (
-          <Link key={stat.label} to={stat.link}>
-            <Card className="border-border hover:border-primary/30 transition-colors cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className={`h-10 w-10 rounded-lg bg-secondary flex items-center justify-center ${stat.color}`}>
-                  <stat.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-heading font-bold text-foreground">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
       <Card className="border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-heading">Recent Activity</CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-coral flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-heading">Recommended Gigs</CardTitle>
+              <p className="text-xs text-muted-foreground">AI-matched based on your profile</p>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {recentActivity.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No recent activity yet</p>
+          {!dataReady || matchLoading ? (
+            <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-sm">Finding your best matches...</span>
+            </div>
+          ) : topMatches.length === 0 ? (
+            <div className="text-center py-10">
+              <Briefcase className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No matching gigs found right now</p>
+              <Link to="/dashboard/gigs" className="text-xs text-primary hover:underline mt-1 inline-block">Browse all gigs →</Link>
+            </div>
           ) : (
-            <div className="space-y-2">
-              {recentActivity.map((notif) => (
-                <div key={notif.id} className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
-                  <div className="h-2 w-2 rounded-full bg-primary mt-1.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground">{notif.title}</p>
-                    {notif.body && <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.body}</p>}
-                  </div>
-                  <span className="text-[11px] text-muted-foreground shrink-0">
-                    {new Date(notif.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-              ))}
+            <div className="space-y-3">
+              {topMatches.map((campaign) => {
+                const pct = matches[campaign.id] || 0;
+                const brand = brandProfiles[campaign.brand_user_id];
+                return (
+                  <Link
+                    key={campaign.id}
+                    to="/dashboard/gigs"
+                    className="block rounded-xl border border-border bg-card p-4 transition-all hover:shadow-md hover:border-primary/20 group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-10 w-10 rounded-lg shrink-0">
+                        <AvatarImage src={brand?.logo_url || undefined} className="rounded-lg object-cover" />
+                        <AvatarFallback className="rounded-lg bg-secondary text-sm font-bold">
+                          {(brand?.business_name || "B").charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="font-heading font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                            {campaign.title}
+                          </h3>
+                          <Badge className={`shrink-0 text-xs font-bold border ${getMatchColor(pct)}`}>
+                            {pct}% match
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{brand?.business_name || "Brand"}</p>
+                        <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground flex-wrap">
+                          {campaign.is_free_product ? (
+                            <span className="flex items-center gap-1"><Gift className="h-3 w-3" /> Free Product</span>
+                          ) : campaign.price_per_video ? (
+                            <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> HK${campaign.price_per_video}/vid</span>
+                          ) : null}
+                          {campaign.target_regions?.length > 0 && (
+                            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {campaign.target_regions.join(", ")}</span>
+                          )}
+                          {campaign.expected_video_count > 0 && (
+                            <span className="flex items-center gap-1"><Video className="h-3 w-3" /> {campaign.expected_video_count} video{campaign.expected_video_count > 1 ? "s" : ""}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Match bar */}
+                    <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-coral transition-all duration-700"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </Link>
+                );
+              })}
+              <Link to="/dashboard/gigs" className="block text-center text-xs text-primary hover:underline pt-2">
+                View all gigs →
+              </Link>
             </div>
           )}
         </CardContent>
