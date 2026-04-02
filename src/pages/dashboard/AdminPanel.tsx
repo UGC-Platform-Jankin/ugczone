@@ -128,11 +128,10 @@ const AdminPanel = () => {
     if (!selectedCreator) return;
     await supabase.from("creator_spotlights" as any).insert({
       creator_user_id: selectedCreator,
-      headline: spotlightHeadline || null,
+      headline: null,
       display_order: spotlights.length,
     } as any);
     setSelectedCreator("");
-    setSpotlightHeadline("");
     fetchSpotlights();
     toast({ title: "Creator added to spotlight" });
   };
