@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import BrandOnboarding from "@/components/onboarding/BrandOnboarding";
 import { useNavigate, Link, useLocation, NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
