@@ -34,6 +34,8 @@ const BrandCampaigns = () => {
   const [campaignTab, setCampaignTab] = useState("active");
   const [removingCreator, setRemovingCreator] = useState<any>(null);
   const [removingLoading, setRemovingLoading] = useState(false);
+  const [campaignResources, setCampaignResources] = useState<any[]>([]);
+  const [contactShares, setContactShares] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
