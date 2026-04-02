@@ -199,7 +199,7 @@ const Gigs = () => {
                         <span className="text-xs text-muted-foreground">
                           {m.videos_delivered || 0}/{m._campaign.expected_video_count} videos
                         </span>
-                        <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-0 text-[11px] font-bold uppercase tracking-wide">
+                        <Badge className="bg-primary/10 text-primary border-0 text-[11px] font-bold uppercase tracking-wide">
                           Active
                         </Badge>
                       </div>
