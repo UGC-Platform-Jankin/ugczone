@@ -53,8 +53,26 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     supabase.from("user_roles" as any).select("role").eq("user_id", user.id).eq("role", "admin").then(({ data }) => {
       if (data && (data as any[]).length > 0) setIsAdmin(true);
     });
-    supabase.from("profiles").select("display_name, username, avatar_url").eq("user_id", user.id).maybeSingle().then(({ data }) => {
-      if (data) setProfile(data);
+    supabase.from("profiles").select("display_name, username, avatar_url, bio, content_types").eq("user_id", user.id).maybeSingle().then(({ data }) => {
+      if (data) {
+        setProfile(data);
+        const hasProfile = data.display_name && data.bio && (data as any).content_types?.length > 0;
+        if (!hasProfile) {
+          // Also check if they have at least one social
+          supabase.from("social_connections").select("id").eq("user_id", user.id).limit(1).then(({ data: socials }) => {
+            setNeedsOnboarding(!hasProfile || !socials?.length);
+            setOnboardingChecked(true);
+          });
+        } else {
+          supabase.from("social_connections").select("id").eq("user_id", user.id).limit(1).then(({ data: socials }) => {
+            setNeedsOnboarding(!socials?.length);
+            setOnboardingChecked(true);
+          });
+        }
+      } else {
+        setNeedsOnboarding(true);
+        setOnboardingChecked(true);
+      }
     });
   }, [user]);
 
