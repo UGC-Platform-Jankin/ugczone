@@ -63,13 +63,22 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
     }
   }, [user]);
 
-  if (loading || !brandProfile) {
+  if (loading || !onboardingChecked) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="h-8 w-8 rounded-lg bg-gradient-coral animate-pulse" />
       </div>
     );
   }
+
+  const handleOnboardingComplete = () => {
+    setNeedsOnboarding(false);
+    if (user) {
+      supabase.from("brand_profiles").select("*").eq("user_id", user.id).single().then(({ data }) => {
+        if (data) setBrandProfile(data);
+      });
+    }
+  };
 
   return (
     <SidebarProvider>
