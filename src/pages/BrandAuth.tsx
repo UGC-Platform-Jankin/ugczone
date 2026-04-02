@@ -120,6 +120,10 @@ const BrandAuth = () => {
                   <Label htmlFor="brand-signup-password">Password</Label>
                   <Input id="brand-signup-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brand-signup-confirm-password">Confirm Password</Label>
+                  <Input id="brand-signup-confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                </div>
                 <Button type="submit" className="w-full bg-[hsl(220,80%,55%)] hover:bg-[hsl(220,80%,50%)] text-primary-foreground" disabled={loading}>
                   {loading ? "Creating account..." : "Create Brand Account"}
                 </Button>
