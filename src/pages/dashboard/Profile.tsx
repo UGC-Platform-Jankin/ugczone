@@ -7,7 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Lock, Save, Camera, Loader2, Instagram, Facebook, Video, Users, Eye, Trash2, Briefcase, Plus } from "lucide-react";
+import { User, Lock, Save, Camera, Loader2, Instagram, Facebook, Video, Users, Eye, Trash2, Briefcase, Plus, Tag } from "lucide-react";
+
+const CONTENT_TYPES = [
+  "Food & Cooking", "Beauty & Skincare", "Fashion & Style", "Tech & Gadgets",
+  "Fitness & Health", "Travel & Lifestyle", "Gaming", "Education & Tutorials",
+  "Comedy & Entertainment", "Music & Dance", "Pets & Animals", "Home & DIY",
+  "Parenting & Family", "Finance & Business", "Art & Photography", "Sports", "Other",
+];
 import { useToast } from "@/hooks/use-toast";
 
 interface SocialForm {
@@ -38,6 +45,7 @@ const Profile = () => {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [contentTypes, setContentTypes] = useState<string[]>([]);
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -68,6 +76,7 @@ const Profile = () => {
         setDisplayName(profileRes.data.display_name || "");
         setBio(profileRes.data.bio || "");
         setAvatarUrl(profileRes.data.avatar_url || "");
+        setContentTypes((profileRes.data as any).content_types || []);
       }
       if (socialsRes.data) {
         const newForms: Record<string, SocialForm> = { instagram: { ...emptyForm }, facebook: { ...emptyForm }, tiktok: { ...emptyForm } };
@@ -117,7 +126,7 @@ const Profile = () => {
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ username, display_name: displayName, bio, avatar_url: avatarUrl.split("?")[0] })
+      .update({ username, display_name: displayName, bio, avatar_url: avatarUrl.split("?")[0], content_types: contentTypes })
       .eq("user_id", user.id);
     if (error) {
       toast({ title: "Error", description: "Failed to update profile", variant: "destructive" });
@@ -293,6 +302,27 @@ const Profile = () => {
             <div className="space-y-2">
               <Label htmlFor="bio">Bio</Label>
               <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell brands about yourself..." rows={3} />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Tag className="h-3.5 w-3.5" /> Content Categories</Label>
+              <div className="flex flex-wrap gap-2">
+                {CONTENT_TYPES.map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setContentTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+                      contentTypes.includes(t)
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-secondary text-muted-foreground border-border hover:border-primary/50"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              {contentTypes.length === 0 && <p className="text-xs text-destructive">Select at least one category</p>}
             </div>
 
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
