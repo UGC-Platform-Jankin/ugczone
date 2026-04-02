@@ -414,7 +414,26 @@ const FindCreators = () => {
                   {viewingCreator.username && (
                     <p className="text-sm text-muted-foreground">@{viewingCreator.username}</p>
                   )}
+                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                    {viewingCreator.gender && <span>{viewingCreator.gender}</span>}
+                    {viewingCreator.country && <span className="flex items-center gap-0.5">📍 {viewingCreator.country}</span>}
+                  </div>
                 </div>
+
+                {/* Content Categories */}
+                {viewingCreator.content_types && viewingCreator.content_types.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Content Categories</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {viewingCreator.content_types.map((t: string) => (
+                          <Badge key={t} className="bg-primary/10 text-primary border-0 text-xs">{t}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Bio */}
                 {viewingCreator.bio && (
