@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Briefcase, Clock, DollarSign, MapPin, Send, Loader2, Check, LogOut, Gift, Video, MoreHorizontal } from "lucide-react";
+import { Briefcase, Clock, DollarSign, MapPin, Send, Loader2, Check, LogOut, Gift, Video, MoreHorizontal, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAIMatch } from "@/hooks/useAIMatch";
 
 interface Campaign {
   id: string;
@@ -43,6 +44,8 @@ const Gigs = () => {
   const [leavingLoading, setLeavingLoading] = useState(false);
   const [brandProfiles, setBrandProfiles] = useState<Record<string, any>>({});
   const [activeTab, setActiveTab] = useState<TabFilter>("available");
+  const [creatorProfile, setCreatorProfile] = useState<any>(null);
+  const [dataReady, setDataReady] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -75,6 +78,20 @@ const Gigs = () => {
           _campaign: campMap[a.campaign_id] || { title: "Campaign", expected_video_count: 0 },
         })));
       }
+      // Load creator profile for AI matching
+      if (user) {
+        const [profRes, socRes] = await Promise.all([
+          supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
+          supabase.from("social_connections").select("platform, followers_count").eq("user_id", user.id),
+        ]);
+        const socials = socRes.data || [];
+        setCreatorProfile({
+          ...profRes.data,
+          platforms: [...new Set(socials.map((s: any) => s.platform))],
+          followers: socials.reduce((sum: number, s: any) => sum + (s.followers_count || 0), 0),
+        });
+      }
+      setDataReady(true);
       setLoading(false);
     };
     fetchData();
@@ -124,6 +141,23 @@ const Gigs = () => {
     setLeavingLoading(false);
   };
 
+  const matchItems = campaigns.map(c => ({
+    id: c.id, title: c.title, description: c.description,
+    platforms: c.platforms, target_regions: c.target_regions, requirements: c.requirements,
+  }));
+
+  const { matches: aiMatches, loading: matchLoading } = useAIMatch(
+    "creator_to_campaigns", creatorProfile, matchItems,
+    dataReady && !!creatorProfile && campaigns.length > 0
+  );
+
+  const getMatchColor = (pct: number) => {
+    if (pct >= 80) return "bg-emerald-500/15 text-emerald-600 border-emerald-500/30";
+    if (pct >= 60) return "bg-amber-500/15 text-amber-600 border-amber-500/30";
+    if (pct >= 40) return "bg-orange-500/15 text-orange-600 border-orange-500/30";
+    return "bg-muted text-muted-foreground border-border";
+  };
+
   const tabs: { key: TabFilter; label: string; count: number }[] = [
     { key: "available", label: "Available", count: campaigns.filter(c => !appliedCampaigns.has(c.id)).length },
     { key: "applied", label: "Applied", count: appliedCampaigns.size },
@@ -134,7 +168,8 @@ const Gigs = () => {
     if (activeTab === "available") return !appliedCampaigns.has(c.id);
     if (activeTab === "applied") return appliedCampaigns.has(c.id) && !activeMemberships.some(m => m.campaign_id === c.id);
     return false;
-  });
+  }).sort((a, b) => (aiMatches[b.id] || 0) - (aiMatches[a.id] || 0));
+
 
   return (
     <div>
@@ -229,6 +264,7 @@ const Gigs = () => {
           {filteredCampaigns.map((campaign) => {
             const hasApplied = appliedCampaigns.has(campaign.id);
             const brand = brandProfiles[campaign.brand_user_id];
+            const matchPct = aiMatches[campaign.id] || 0;
             return (
               <div
                 key={campaign.id}
@@ -250,6 +286,11 @@ const Gigs = () => {
                         </h3>
                         <p className="text-sm text-muted-foreground mt-0.5">{brand?.business_name || "Brand"}</p>
                       </div>
+                      {matchPct > 0 && (
+                        <Badge className={`shrink-0 text-[11px] font-bold border ${getMatchColor(matchPct)}`}>
+                          <Sparkles className="h-3 w-3 mr-0.5" />{matchPct}%
+                        </Badge>
+                      )}
                       {hasApplied && (
                         <Badge className="bg-accent/10 text-accent-foreground border-0 text-[11px] font-bold uppercase tracking-wide shrink-0">
                           Applied

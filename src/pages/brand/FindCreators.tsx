@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Users, Search, Send, Loader2, Instagram, Facebook, Video, Filter, X, Eye, Globe, Briefcase } from "lucide-react";
+import { Users, Search, Send, Loader2, Instagram, Facebook, Video, Filter, X, Eye, Globe, Briefcase, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAIMatch } from "@/hooks/useAIMatch";
 
 const platformIcons: Record<string, any> = { instagram: Instagram, facebook: Facebook, tiktok: Video };
 const platformColors: Record<string, string> = { instagram: "text-pink-400", facebook: "text-blue-400", tiktok: "text-cyan-400" };
@@ -60,6 +61,7 @@ const FindCreators = () => {
   const [viewingCreator, setViewingCreator] = useState<Creator | null>(null);
   const [creatorCollabs, setCreatorCollabs] = useState<any[]>([]);
   const [creatorSocialDetails, setCreatorSocialDetails] = useState<any[]>([]);
+  const [brandCampaignData, setBrandCampaignData] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -85,16 +87,37 @@ const FindCreators = () => {
 
       setCreators(creatorList);
       setFiltered(creatorList);
-      setCampaigns((campaignsRes.data as any) || []);
+      const loadedCampaigns = (campaignsRes.data as any) || [];
+      setCampaigns(loadedCampaigns);
+      setBrandCampaignData(loadedCampaigns);
       setLoading(false);
     };
     load();
   }, [user]);
 
+  const matchItems = creators.map(c => ({
+    user_id: c.user_id, display_name: c.display_name, bio: c.bio,
+    platforms: c.socials.map(s => s.platform),
+    followers: c.socials.reduce((sum, s) => sum + (s.followers_count || 0), 0),
+  }));
+
+  const { matches: creatorMatches, loading: matchLoading } = useAIMatch(
+    "campaign_to_creators",
+    { campaigns: brandCampaignData },
+    matchItems,
+    !loading && creators.length > 0 && brandCampaignData.length > 0
+  );
+
+  const getMatchColor = (pct: number) => {
+    if (pct >= 80) return "bg-emerald-500/15 text-emerald-600 border-emerald-500/30";
+    if (pct >= 60) return "bg-amber-500/15 text-amber-600 border-amber-500/30";
+    if (pct >= 40) return "bg-orange-500/15 text-orange-600 border-orange-500/30";
+    return "bg-muted text-muted-foreground border-border";
+  };
+
   useEffect(() => {
     let result = creators;
     
-    // Search filter
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter((c) =>
@@ -104,12 +127,10 @@ const FindCreators = () => {
       );
     }
 
-    // Platform filter
     if (platformFilter !== "all") {
       result = result.filter((c) => c.socials.some((s) => s.platform === platformFilter));
     }
 
-    // Follower filter
     const range = followerRanges[followerFilter];
     if (range && range.min > 0) {
       result = result.filter((c) => {
@@ -118,8 +139,9 @@ const FindCreators = () => {
       });
     }
 
+    result.sort((a, b) => (creatorMatches[b.user_id] || 0) - (creatorMatches[a.user_id] || 0));
     setFiltered(result);
-  }, [search, creators, platformFilter, followerFilter]);
+  }, [search, creators, platformFilter, followerFilter, creatorMatches]);
 
   const handleInvite = async () => {
     if (!user || !inviteCreator || !selectedCampaignId) return;
@@ -255,7 +277,9 @@ const FindCreators = () => {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((creator) => (
+          {filtered.map((creator) => {
+            const matchPct = creatorMatches[creator.user_id] || 0;
+            return (
             <Card key={creator.user_id} className="border-border/50 hover:border-primary/30 transition-colors">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3 mb-3">
@@ -264,7 +288,14 @@ const FindCreators = () => {
                     <AvatarFallback className="bg-secondary text-lg">{(creator.display_name || "?").charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground truncate">{creator.display_name || "Creator"}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-foreground truncate">{creator.display_name || "Creator"}</p>
+                      {matchPct > 0 && (
+                        <Badge className={`shrink-0 text-[11px] font-bold border ${getMatchColor(matchPct)}`}>
+                          <Sparkles className="h-3 w-3 mr-0.5" />{matchPct}%
+                        </Badge>
+                      )}
+                    </div>
                     {creator.username && <p className="text-xs text-muted-foreground">@{creator.username}</p>}
                     {creator.bio && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{creator.bio}</p>}
                   </div>
@@ -300,7 +331,7 @@ const FindCreators = () => {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       )}
 
