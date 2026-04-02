@@ -70,7 +70,7 @@ const FindCreators = () => {
     if (!user) return;
     const load = async () => {
       const [profilesRes, socialsRes, campaignsRes, collabsRes] = await Promise.all([
-        supabase.from("profiles").select("user_id, display_name, username, bio, avatar_url"),
+        supabase.from("profiles").select("user_id, display_name, username, bio, avatar_url, content_types, gender, country"),
         supabase.from("social_connections").select("user_id, platform, followers_count, average_views, platform_username"),
         supabase.from("campaigns").select("id, title, description, platforms, target_regions").eq("brand_user_id", user.id).eq("status", "active"),
         supabase.from("past_collaborations").select("user_id, brand_name"),
