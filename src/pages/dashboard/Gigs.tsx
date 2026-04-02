@@ -286,6 +286,11 @@ const Gigs = () => {
                         </h3>
                         <p className="text-sm text-muted-foreground mt-0.5">{brand?.business_name || "Brand"}</p>
                       </div>
+                      {matchPct > 0 && (
+                        <Badge className={`shrink-0 text-[11px] font-bold border ${getMatchColor(matchPct)}`}>
+                          <Sparkles className="h-3 w-3 mr-0.5" />{matchPct}%
+                        </Badge>
+                      )}
                       {hasApplied && (
                         <Badge className="bg-accent/10 text-accent-foreground border-0 text-[11px] font-bold uppercase tracking-wide shrink-0">
                           Applied
