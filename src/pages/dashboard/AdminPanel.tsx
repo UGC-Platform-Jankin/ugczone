@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -18,15 +18,11 @@ const AdminPanel = () => {
 
   // Brands state
   const [brands, setBrands] = useState<any[]>([]);
-  const [newBrandName, setNewBrandName] = useState("");
-  const [newBrandLogo, setNewBrandLogo] = useState("");
-  const [newBrandWebsite, setNewBrandWebsite] = useState("");
 
   // Spotlight state
   const [spotlights, setSpotlights] = useState<any[]>([]);
   const [allCreators, setAllCreators] = useState<any[]>([]);
   const [selectedCreator, setSelectedCreator] = useState("");
-  const [spotlightHeadline, setSpotlightHeadline] = useState("");
 
   // Reviews state
   const [pendingReviews, setPendingReviews] = useState<any[]>([]);
@@ -42,6 +38,7 @@ const AdminPanel = () => {
         fetchSpotlights();
         fetchPendingReviews();
         fetchCreators();
+        fetchExistingBrands();
       }
       setLoading(false);
     };
@@ -90,18 +87,27 @@ const AdminPanel = () => {
     setPendingReviews(enriched);
   };
 
+  // Brand state for selecting from existing brands
+  const [existingBrands, setExistingBrands] = useState<any[]>([]);
+  const [selectedBrandId, setSelectedBrandId] = useState("");
+
+  const fetchExistingBrands = async () => {
+    const { data } = await supabase.from("brand_profiles").select("user_id, business_name, logo_url, website_url");
+    if (data) setExistingBrands(data as any[]);
+  };
+
   // Brand actions
   const addBrand = async () => {
-    if (!newBrandName.trim()) return;
+    if (!selectedBrandId) return;
+    const brand = existingBrands.find(b => b.user_id === selectedBrandId);
+    if (!brand) return;
     await supabase.from("homepage_brands" as any).insert({
-      brand_name: newBrandName,
-      logo_url: newBrandLogo || null,
-      website_url: newBrandWebsite || null,
+      brand_name: brand.business_name,
+      logo_url: brand.logo_url || null,
+      website_url: brand.website_url || null,
       display_order: brands.length,
     } as any);
-    setNewBrandName("");
-    setNewBrandLogo("");
-    setNewBrandWebsite("");
+    setSelectedBrandId("");
     fetchBrands();
     toast({ title: "Brand added" });
   };
@@ -122,11 +128,10 @@ const AdminPanel = () => {
     if (!selectedCreator) return;
     await supabase.from("creator_spotlights" as any).insert({
       creator_user_id: selectedCreator,
-      headline: spotlightHeadline || null,
+      headline: null,
       display_order: spotlights.length,
     } as any);
     setSelectedCreator("");
-    setSpotlightHeadline("");
     fetchSpotlights();
     toast({ title: "Creator added to spotlight" });
   };
@@ -150,17 +155,6 @@ const AdminPanel = () => {
     toast({ title: "Review rejected" });
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    const path = `brand-logos/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file);
-    if (error) return;
-    const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-    setNewBrandLogo(publicUrl);
-    toast({ title: "Logo uploaded" });
-  };
-
   if (loading) return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading...</div>;
   if (!isAdmin) return <div className="flex items-center justify-center h-64 text-muted-foreground">Admin access required.</div>;
 
@@ -179,17 +173,34 @@ const AdminPanel = () => {
           <Card className="border-border bg-card">
             <CardHeader><CardTitle className="text-lg">Add Brand</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <Input placeholder="Brand name" value={newBrandName} onChange={(e) => setNewBrandName(e.target.value)} className="bg-secondary" />
-              <div className="flex gap-2 items-center">
-                <Input placeholder="Logo URL (or upload)" value={newBrandLogo} onChange={(e) => setNewBrandLogo(e.target.value)} className="bg-secondary flex-1" />
-                <label className="cursor-pointer">
-                  <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-                  <Button variant="outline" size="sm" asChild><span>Upload</span></Button>
-                </label>
-              </div>
-              {newBrandLogo && <img src={newBrandLogo} alt="Preview" className="h-12 w-12 rounded-lg object-contain bg-secondary p-1" />}
-              <Input placeholder="Website URL (optional)" value={newBrandWebsite} onChange={(e) => setNewBrandWebsite(e.target.value)} className="bg-secondary" />
-              <Button onClick={addBrand} disabled={!newBrandName.trim()} className="bg-gradient-coral text-primary-foreground gap-2">
+              <select
+                value={selectedBrandId}
+                onChange={(e) => setSelectedBrandId(e.target.value)}
+                className="w-full rounded-md bg-secondary border border-border px-3 py-2 text-sm text-foreground"
+              >
+                <option value="">Select a brand...</option>
+                {existingBrands
+                  .filter(eb => !brands.some(b => b.brand_name === eb.business_name))
+                  .map((b) => (
+                    <option key={b.user_id} value={b.user_id}>
+                      {b.business_name}
+                    </option>
+                  ))}
+              </select>
+              {selectedBrandId && (() => {
+                const preview = existingBrands.find(b => b.user_id === selectedBrandId);
+                return preview ? (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    {preview.logo_url ? (
+                      <img src={preview.logo_url} alt={preview.business_name} className="h-10 w-10 rounded-lg object-contain bg-secondary p-1" />
+                    ) : (
+                      <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center text-sm font-bold text-primary">{preview.business_name.charAt(0)}</div>
+                    )}
+                    <span className="font-medium text-foreground">{preview.business_name}</span>
+                  </div>
+                ) : null;
+              })()}
+              <Button onClick={addBrand} disabled={!selectedBrandId} className="bg-gradient-coral text-primary-foreground gap-2">
                 <Plus className="h-4 w-4" /> Add Brand
               </Button>
             </CardContent>
@@ -231,7 +242,6 @@ const AdminPanel = () => {
                   </option>
                 ))}
               </select>
-              <Input placeholder="Headline (e.g. Food & Lifestyle Creator)" value={spotlightHeadline} onChange={(e) => setSpotlightHeadline(e.target.value)} className="bg-secondary" />
               <Button onClick={addSpotlight} disabled={!selectedCreator} className="bg-gradient-coral text-primary-foreground gap-2">
                 <Plus className="h-4 w-4" /> Add to Spotlight
               </Button>
