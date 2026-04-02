@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Loader2, Instagram, Facebook, Video } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Loader2, Instagram, Facebook, Video, MessageSquare, Phone, Globe, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const platformOptions = [
@@ -40,6 +41,12 @@ const regionOptions = [
   { value: "France", label: "🇫🇷 France" },
 ];
 
+const contactTypeOptions = [
+  { value: "imessage", label: "iMessage", icon: Phone },
+  { value: "whatsapp", label: "WhatsApp", icon: MessageSquare },
+  { value: "instagram_dm", label: "Instagram DM", icon: Instagram },
+];
+
 const CreateCampaign = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -59,6 +66,15 @@ const CreateCampaign = () => {
   const [selectedRegions, setSelectedRegions] = useState<string[]>(reuse?.target_regions || ["Worldwide"]);
   const [maxCreators, setMaxCreators] = useState(reuse?.max_creators?.toString() || "10");
   const [submitting, setSubmitting] = useState(false);
+
+  // Communication settings
+  const [communicationType, setCommunicationType] = useState(reuse?.communication_type || "in_app_chat");
+  const [externalCommLink, setExternalCommLink] = useState(reuse?.external_comm_link || "");
+  const [requestContactTypes, setRequestContactTypes] = useState<string[]>(reuse?.request_contact_types || []);
+
+  // Calendly
+  const [calendlyEnabled, setCalendlyEnabled] = useState(reuse?.calendly_enabled || false);
+  const [calendlyLink, setCalendlyLink] = useState(reuse?.calendly_link || "");
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/brand/auth");
@@ -88,6 +104,12 @@ const CreateCampaign = () => {
     });
   };
 
+  const toggleContactType = (type: string) => {
+    setRequestContactTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -101,6 +123,18 @@ const CreateCampaign = () => {
     }
     if (!isFreeProduct && (!pricePerVideo || Number(pricePerVideo) <= 0)) {
       toast({ title: "Price required", description: "Enter a price per video or toggle free product.", variant: "destructive" });
+      return;
+    }
+    if (communicationType === "external" && !externalCommLink.trim()) {
+      toast({ title: "External link required", description: "Provide a Discord/group link or choose a different communication method.", variant: "destructive" });
+      return;
+    }
+    if (communicationType === "request_contact" && requestContactTypes.length === 0) {
+      toast({ title: "Select contact types", description: "Choose at least one contact method to request from creators.", variant: "destructive" });
+      return;
+    }
+    if (calendlyEnabled && !calendlyLink.trim()) {
+      toast({ title: "Calendly link required", description: "Provide your Calendly URL or disable call scheduling.", variant: "destructive" });
       return;
     }
 
@@ -117,17 +151,23 @@ const CreateCampaign = () => {
       requirements: requirements || null,
       target_regions: selectedRegions,
       max_creators: Number(maxCreators) || 10,
-    } as any).select("id, title, max_creators").single();
+      communication_type: communicationType,
+      external_comm_link: communicationType === "external" ? externalCommLink.trim() : null,
+      request_contact_types: communicationType === "request_contact" ? requestContactTypes : [],
+      calendly_enabled: calendlyEnabled,
+      calendly_link: calendlyEnabled ? calendlyLink.trim() : null,
+    } as any).select("id, title, max_creators, communication_type").single();
     setSubmitting(false);
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      if ((insertedCampaign?.max_creators || 0) > 1) {
+      // Only create group chat if using in-app chat and max_creators > 1
+      if ((insertedCampaign as any)?.communication_type === "in_app_chat" && ((insertedCampaign as any)?.max_creators || 0) > 1) {
         const { data: groupRoom } = await supabase.from("chat_rooms").insert({
           type: "group",
-          campaign_id: insertedCampaign.id,
-          name: insertedCampaign.title,
+          campaign_id: insertedCampaign!.id,
+          name: insertedCampaign!.title,
         } as any).select("id").single();
 
         if (groupRoom) {
@@ -135,7 +175,7 @@ const CreateCampaign = () => {
           await supabase.from("messages").insert({
             chat_room_id: groupRoom.id,
             sender_id: user.id,
-            content: `Welcome to the ${insertedCampaign.title} campaign group chat. This space is for the brand and accepted creators to coordinate together.`,
+            content: `Welcome to the ${insertedCampaign!.title} campaign group chat. This space is for the brand and accepted creators to coordinate together.`,
             pinned: true,
           } as any);
         }
@@ -282,6 +322,72 @@ const CreateCampaign = () => {
               <div className="space-y-2">
                 <Label htmlFor="requirements">Additional Requirements</Label>
                 <Textarea id="requirements" placeholder="e.g. Must have 1000+ followers, based in Hong Kong, etc." value={requirements} onChange={(e) => setRequirements(e.target.value)} />
+              </div>
+
+              {/* Communication Settings */}
+              <div className="space-y-4 p-4 rounded-lg bg-secondary/50 border border-border/50">
+                <div>
+                  <Label className="text-sm font-medium flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Communication Method</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">How would you like to communicate with creators?</p>
+                </div>
+                <Select value={communicationType} onValueChange={setCommunicationType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in_app_chat">In-app Chat (Group + Private DMs)</SelectItem>
+                    <SelectItem value="external">External Link (Discord, Telegram, etc.)</SelectItem>
+                    <SelectItem value="request_contact">Request Creator Contact (iMessage, WhatsApp, IG)</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {communicationType === "external" && (
+                  <div className="space-y-2">
+                    <Label>External Chat Link *</Label>
+                    <Input placeholder="https://discord.gg/... or any group link" value={externalCommLink} onChange={(e) => setExternalCommLink(e.target.value)} />
+                  </div>
+                )}
+
+                {communicationType === "request_contact" && (
+                  <div className="space-y-2">
+                    <Label>Request which contact methods? *</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {contactTypeOptions.map(({ value, label, icon: Icon }) => {
+                        const selected = requestContactTypes.includes(value);
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => toggleContactType(value)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                              selected
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border bg-secondary/50 text-muted-foreground hover:border-primary/50"
+                            }`}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Calendly Scheduling */}
+              <div className="space-y-4 p-4 rounded-lg bg-secondary/50 border border-border/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium flex items-center gap-2"><Calendar className="h-4 w-4" /> Call Scheduling</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Allow creators to book calls with you via Calendly</p>
+                  </div>
+                  <Switch checked={calendlyEnabled} onCheckedChange={setCalendlyEnabled} />
+                </div>
+                {calendlyEnabled && (
+                  <div className="space-y-2">
+                    <Label>Calendly Link *</Label>
+                    <Input placeholder="https://calendly.com/yourbusiness/30min" value={calendlyLink} onChange={(e) => setCalendlyLink(e.target.value)} />
+                  </div>
+                )}
               </div>
 
               <Button type="submit" className="w-full" disabled={submitting || !title || !isDescValid || selectedPlatforms.length === 0}>

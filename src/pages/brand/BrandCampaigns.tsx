@@ -9,8 +9,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Megaphone, Users, Check, X, Loader2, Clock, Eye, Instagram, Facebook, Video, Copy, StopCircle } from "lucide-react";
+import { Megaphone, Users, Check, X, Loader2, Clock, Eye, Instagram, Facebook, Video, Copy, StopCircle, Calendar, ExternalLink, MessageSquare, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import CampaignResources from "@/components/brand/CampaignResources";
 
 const platformIcons: Record<string, any> = { instagram: Instagram, facebook: Facebook, tiktok: Video };
 
@@ -33,6 +34,8 @@ const BrandCampaigns = () => {
   const [campaignTab, setCampaignTab] = useState("active");
   const [removingCreator, setRemovingCreator] = useState<any>(null);
   const [removingLoading, setRemovingLoading] = useState(false);
+  const [campaignResources, setCampaignResources] = useState<any[]>([]);
+  const [contactShares, setContactShares] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -58,8 +61,14 @@ const BrandCampaigns = () => {
 
   const loadApplications = async (campaignId: string) => {
     setLoadingApps(true);
-    const { data } = await supabase.from("campaign_applications").select("*").eq("campaign_id", campaignId).order("created_at", { ascending: false });
-    const apps = (data as any) || [];
+    const [appsRes, resourcesRes, sharesRes] = await Promise.all([
+      supabase.from("campaign_applications").select("*").eq("campaign_id", campaignId).order("created_at", { ascending: false }),
+      supabase.from("campaign_resources" as any).select("*").eq("campaign_id", campaignId).order("display_order"),
+      supabase.from("contact_shares" as any).select("*").eq("campaign_id", campaignId),
+    ]);
+    const apps = (appsRes.data as any) || [];
+    setCampaignResources((resourcesRes.data as any) || []);
+    setContactShares((sharesRes.data as any) || []);
     const creatorIds = [...new Set(apps.map((a: any) => a.creator_user_id))];
     if (creatorIds.length > 0) {
       const [profilesRes, socialsRes] = await Promise.all([
@@ -325,6 +334,11 @@ const BrandCampaigns = () => {
           requirements: campaign.requirements,
           target_regions: campaign.target_regions,
           max_creators: campaign.max_creators,
+          communication_type: campaign.communication_type,
+          external_comm_link: campaign.external_comm_link,
+          request_contact_types: campaign.request_contact_types,
+          calendly_enabled: campaign.calendly_enabled,
+          calendly_link: campaign.calendly_link,
         },
       },
     });
@@ -445,6 +459,51 @@ const BrandCampaigns = () => {
                 </div>
               )}
 
+              {/* Communication & Scheduling Info */}
+              <div className="grid grid-cols-2 gap-3">
+                {selectedCampaign.communication_type && selectedCampaign.communication_type !== "in_app_chat" && (
+                  <div className="p-3 rounded-lg bg-secondary/50">
+                    <p className="text-xs text-muted-foreground">Communication</p>
+                    <p className="text-sm font-medium text-foreground capitalize flex items-center gap-1">
+                      {selectedCampaign.communication_type === "external" ? (
+                        <><ExternalLink className="h-3.5 w-3.5" /> External Link</>
+                      ) : (
+                        <><MessageSquare className="h-3.5 w-3.5" /> Request Contact</>
+                      )}
+                    </p>
+                  </div>
+                )}
+                {selectedCampaign.calendly_enabled && (
+                  <div className="p-3 rounded-lg bg-secondary/50">
+                    <p className="text-xs text-muted-foreground">Call Scheduling</p>
+                    <p className="text-sm font-medium text-foreground flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" /> Calendly Enabled
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Contact Shares from Creators */}
+              {selectedCampaign.communication_type === "request_contact" && contactShares.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase mb-2">Creator Contact Info</p>
+                  <div className="space-y-2">
+                    {contactShares.map((share: any) => {
+                      const app = applications.find((a: any) => a.creator_user_id === share.creator_user_id);
+                      const name = app?._profile?.display_name || app?._profile?.username || "Creator";
+                      return (
+                        <div key={share.id} className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50 text-sm">
+                          <Phone className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <span className="font-medium text-foreground">{name}</span>
+                          <span className="text-muted-foreground capitalize">{share.contact_type.replace("_", " ")}:</span>
+                          <span className="text-foreground">{share.contact_value}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Action buttons */}
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleReuseCampaign(selectedCampaign)}>
@@ -496,6 +555,15 @@ const BrandCampaigns = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Campaign Resources */}
+          <div className="mb-6">
+            <CampaignResources
+              campaignId={selectedCampaign.id}
+              resources={campaignResources}
+              onUpdate={() => loadApplications(selectedCampaign.id)}
+            />
+          </div>
 
           <h3 className="font-medium text-foreground mb-3 flex items-center gap-2"><Users className="h-4 w-4" /> Applications</h3>
           {loadingApps ? (
