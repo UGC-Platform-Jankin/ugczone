@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link, NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import CreatorOnboarding from "@/components/onboarding/CreatorOnboarding";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Briefcase, User, LogOut, MessageCircle, Shield, Video, Link2, LayoutDashboard, Sun, Moon, Sparkles } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
