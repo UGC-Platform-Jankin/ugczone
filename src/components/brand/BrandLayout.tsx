@@ -52,11 +52,16 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (user) {
       supabase.from("brand_profiles").select("*").eq("user_id", user.id).single().then(({ data }) => {
-        if (!data) navigate("/brand/setup");
-        else setBrandProfile(data);
+        if (!data) {
+          setNeedsOnboarding(true);
+          setOnboardingChecked(true);
+        } else {
+          setBrandProfile(data);
+          setOnboardingChecked(true);
+        }
       });
     }
-  }, [user, navigate]);
+  }, [user]);
 
   if (loading || !brandProfile) {
     return (
