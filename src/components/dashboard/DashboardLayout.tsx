@@ -86,8 +86,17 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
   if (!user) return null;
 
+  const handleOnboardingComplete = () => {
+    setNeedsOnboarding(false);
+    // Refresh profile
+    supabase.from("profiles").select("display_name, username, avatar_url, bio, content_types").eq("user_id", user.id).maybeSingle().then(({ data }) => {
+      if (data) setProfile(data);
+    });
+  };
+
   return (
     <SidebarProvider>
+      {onboardingChecked && needsOnboarding && <CreatorOnboarding onComplete={handleOnboardingComplete} />}
       <div className="min-h-screen flex w-full bg-background">
         <Sidebar className="border-r-0">
           <SidebarHeader className="p-5 border-b border-sidebar-border">
