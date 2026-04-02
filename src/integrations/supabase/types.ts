@@ -141,19 +141,65 @@ export type Database = {
           },
         ]
       }
+      campaign_resources: {
+        Row: {
+          campaign_id: string
+          content: string | null
+          created_at: string
+          display_order: number
+          file_url: string | null
+          id: string
+          title: string
+          type: string
+        }
+        Insert: {
+          campaign_id: string
+          content?: string | null
+          created_at?: string
+          display_order?: number
+          file_url?: string | null
+          id?: string
+          title: string
+          type?: string
+        }
+        Update: {
+          campaign_id?: string
+          content?: string | null
+          created_at?: string
+          display_order?: number
+          file_url?: string | null
+          id?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_resources_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           brand_user_id: string
           budget: number | null
+          calendly_enabled: boolean
+          calendly_link: string | null
           campaign_length_days: number | null
+          communication_type: string
           created_at: string
           description: string | null
           expected_video_count: number
+          external_comm_link: string | null
           id: string
           is_free_product: boolean
           max_creators: number
           platforms: string[] | null
           price_per_video: number | null
+          request_contact_types: string[] | null
           requirements: string | null
           status: string
           target_regions: string[]
@@ -163,15 +209,20 @@ export type Database = {
         Insert: {
           brand_user_id: string
           budget?: number | null
+          calendly_enabled?: boolean
+          calendly_link?: string | null
           campaign_length_days?: number | null
+          communication_type?: string
           created_at?: string
           description?: string | null
           expected_video_count?: number
+          external_comm_link?: string | null
           id?: string
           is_free_product?: boolean
           max_creators?: number
           platforms?: string[] | null
           price_per_video?: number | null
+          request_contact_types?: string[] | null
           requirements?: string | null
           status?: string
           target_regions?: string[]
@@ -181,15 +232,20 @@ export type Database = {
         Update: {
           brand_user_id?: string
           budget?: number | null
+          calendly_enabled?: boolean
+          calendly_link?: string | null
           campaign_length_days?: number | null
+          communication_type?: string
           created_at?: string
           description?: string | null
           expected_video_count?: number
+          external_comm_link?: string | null
           id?: string
           is_free_product?: boolean
           max_creators?: number
           platforms?: string[] | null
           price_per_video?: number | null
+          request_contact_types?: string[] | null
           requirements?: string | null
           status?: string
           target_regions?: string[]
@@ -252,6 +308,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "chat_rooms_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_shares: {
+        Row: {
+          campaign_id: string
+          contact_type: string
+          contact_value: string
+          created_at: string
+          creator_user_id: string
+          id: string
+        }
+        Insert: {
+          campaign_id: string
+          contact_type: string
+          contact_value: string
+          created_at?: string
+          creator_user_id: string
+          id?: string
+        }
+        Update: {
+          campaign_id?: string
+          contact_type?: string
+          contact_value?: string
+          created_at?: string
+          creator_user_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_shares_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
