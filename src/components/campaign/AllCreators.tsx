@@ -95,6 +95,7 @@ const AllCreators = ({ campaignId }: Props) => {
       _socials: socialMap[a.creator_user_id] || [],
       _submissions: subMap[a.creator_user_id] || [],
       _links: linkMap[a.creator_user_id] || [],
+      _email: emailMap[a.creator_user_id] || null,
     }));
 
     setCreators(result);
