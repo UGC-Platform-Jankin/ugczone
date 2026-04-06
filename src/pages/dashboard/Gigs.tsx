@@ -60,6 +60,8 @@ const Gigs = () => {
   const [dataReady, setDataReady] = useState(false);
   const [applicationCounts, setApplicationCounts] = useState<Record<string, number>>({});
   const [acceptedCounts, setAcceptedCounts] = useState<Record<string, number>>({});
+  const [applicationStatuses, setApplicationStatuses] = useState<Record<string, string>>({});
+  const [activeGigDetail, setActiveGigDetail] = useState<any>(null);
 
   // Filters
   const [showFilters, setShowFilters] = useState(false);
@@ -85,16 +87,20 @@ const Gigs = () => {
         supabase.from("campaigns").select("*").eq("status", "active").order("created_at", { ascending: false }),
         user ? supabase.from("campaign_applications").select("*").eq("creator_user_id", user.id) : Promise.resolve({ data: [] }),
       ]);
-      const allCampaigns = (campaignsRes.data as Campaign[]) || [];
-      setCampaigns(allCampaigns);
+      const allCampaignsRaw = (campaignsRes.data as Campaign[]) || [];
 
-      const brandUserIds = [...new Set(allCampaigns.map(c => c.brand_user_id))] as string[];
+      // Fetch brand profiles and filter out campaigns with no existing brand
+      const brandUserIds = [...new Set(allCampaignsRaw.map(c => c.brand_user_id))] as string[];
+      let brandMap: Record<string, any> = {};
       if (brandUserIds.length > 0) {
         const { data: brands } = await supabase.from("brand_profiles").select("user_id, business_name, logo_url, website_url, instagram_url, tiktok_url").in("user_id", brandUserIds);
-        const brandMap: Record<string, any> = {};
         (brands || []).forEach((b: any) => { brandMap[b.user_id] = b; });
-        setBrandProfiles(brandMap);
       }
+      setBrandProfiles(brandMap);
+
+      // Only show campaigns where the brand profile still exists
+      const allCampaigns = allCampaignsRaw.filter(c => brandMap[c.brand_user_id]);
+      setCampaigns(allCampaigns);
 
       // Get application counts per campaign
       const campIds = allCampaigns.map(c => c.id);
@@ -112,13 +118,25 @@ const Gigs = () => {
 
       const allApps = (applicationsRes.data as any) || [];
       setAppliedCampaigns(new Set(allApps.map((a: any) => a.campaign_id)));
+      // Track per-campaign application status
+      const statusMap: Record<string, string> = {};
+      allApps.forEach((a: any) => { statusMap[a.campaign_id] = a.status; });
+      setApplicationStatuses(statusMap);
 
       const accepted = allApps.filter((a: any) => a.status === "accepted");
       if (accepted.length > 0) {
         const ids = [...new Set(accepted.map((a: any) => a.campaign_id))] as string[];
-        const { data: campData } = await supabase.from("campaigns").select("id, title, expected_video_count, brand_user_id").in("id", ids);
+        const { data: campData } = await supabase.from("campaigns").select("*").in("id", ids);
         const campMap: Record<string, any> = {};
         (campData || []).forEach((c: any) => { campMap[c.id] = c; });
+        // Also fetch brand profiles for active campaigns that might not be in allCampaigns
+        const activeBrandIds = [...new Set((campData || []).map((c: any) => c.brand_user_id))] as string[];
+        const newBrandIds = activeBrandIds.filter(id => !brandMap[id]);
+        if (newBrandIds.length > 0) {
+          const { data: moreBrands } = await supabase.from("brand_profiles").select("user_id, business_name, logo_url, website_url, instagram_url, tiktok_url").in("user_id", newBrandIds);
+          (moreBrands || []).forEach((b: any) => { brandMap[b.user_id] = b; });
+          setBrandProfiles({ ...brandMap });
+        }
         setActiveMemberships(accepted.map((a: any) => ({
           ...a, _campaign: campMap[a.campaign_id] || { title: "Campaign", expected_video_count: 0 },
         })));
@@ -228,7 +246,7 @@ const Gigs = () => {
 
   const tabs: { key: TabFilter; label: string; count: number }[] = [
     { key: "available", label: "Available", count: campaigns.filter(c => !appliedCampaigns.has(c.id)).length },
-    { key: "applied", label: "Applied", count: appliedCampaigns.size },
+    { key: "applied", label: "Applied", count: [...appliedCampaigns].filter(id => campaigns.some(c => c.id === id)).length },
     { key: "active", label: "Active", count: activeMemberships.length },
   ];
 
@@ -247,7 +265,7 @@ const Gigs = () => {
   const filteredCampaigns = applyFilters(
     campaigns.filter((c) => {
       if (activeTab === "available") return !appliedCampaigns.has(c.id);
-      if (activeTab === "applied") return appliedCampaigns.has(c.id) && !activeMemberships.some(m => m.campaign_id === c.id);
+      if (activeTab === "applied") return appliedCampaigns.has(c.id);
       return false;
     })
   ).sort((a, b) => (aiMatches[b.id] || 0) - (aiMatches[a.id] || 0));
@@ -371,15 +389,31 @@ const Gigs = () => {
           <div className="space-y-4">
             <ActiveGigHub />
             <div className="space-y-3">
-              {activeMemberships.map(m => (
-                <div key={m.id} className="rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-md">
+              {activeMemberships.map(m => {
+                const brand = brandProfiles[m._campaign.brand_user_id];
+                return (
+                <div key={m.id} className="rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/20 cursor-pointer"
+                  onClick={() => {
+                    // Find the full campaign data to show details
+                    const fullCampaign = campaigns.find(c => c.id === m.campaign_id);
+                    if (fullCampaign) {
+                      setActiveGigDetail({ ...m, _fullCampaign: fullCampaign });
+                    } else {
+                      // If campaign not in active list (could be non-active status), fetch it
+                      setActiveGigDetail(m);
+                    }
+                  }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-gradient-coral flex items-center justify-center shrink-0">
-                        <Video className="h-5 w-5 text-white" />
-                      </div>
+                      <Avatar className="h-12 w-12 rounded-xl ring-2 ring-border shrink-0">
+                        <AvatarImage src={brand?.logo_url || undefined} className="rounded-xl object-cover" />
+                        <AvatarFallback className="rounded-xl bg-secondary text-base font-bold">
+                          {(brand?.business_name || m._campaign.title || "B").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <h3 className="font-heading font-bold text-foreground">{m._campaign.title}</h3>
+                        {brand && <p className="text-xs text-muted-foreground">{brand.business_name}</p>}
                         <div className="flex items-center gap-3 mt-1">
                           <span className="text-xs text-muted-foreground">{m.videos_delivered || 0}/{m._campaign.expected_video_count} videos</span>
                           <Badge className="bg-primary/10 text-primary border-0 text-[11px] font-bold uppercase tracking-wide">Active</Badge>
@@ -387,12 +421,13 @@ const Gigs = () => {
                       </div>
                     </div>
                     <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 rounded-full"
-                      onClick={() => setLeavingCampaign(m)}>
+                      onClick={(e) => { e.stopPropagation(); setLeavingCampaign(m); }}>
                       <LogOut className="h-3.5 w-3.5" /> Leave
                     </Button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )
@@ -431,8 +466,18 @@ const Gigs = () => {
                             <Sparkles className="h-3 w-3 mr-0.5" />{matchPct}%
                           </Badge>
                         )}
-                        {hasApplied && (
-                          <Badge className="bg-accent/10 text-accent-foreground border-0 text-[11px] font-bold uppercase tracking-wide">Applied</Badge>
+                         {hasApplied && (
+                          <Badge className={`border-0 text-[11px] font-bold uppercase tracking-wide ${
+                            applicationStatuses[campaign.id] === "accepted" 
+                              ? "bg-emerald-500/15 text-emerald-600" 
+                              : applicationStatuses[campaign.id] === "rejected"
+                              ? "bg-destructive/15 text-destructive"
+                              : "bg-accent/10 text-accent-foreground"
+                          }`}>
+                            {applicationStatuses[campaign.id] === "accepted" ? "Accepted" 
+                              : applicationStatuses[campaign.id] === "rejected" ? "Rejected" 
+                              : "Applied"}
+                          </Badge>
                         )}
                       </div>
                     </div>
@@ -687,6 +732,137 @@ const Gigs = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Active Gig Detail Dialog */}
+      <Dialog open={!!activeGigDetail} onOpenChange={(open) => !open && setActiveGigDetail(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl p-0">
+          {activeGigDetail && (() => {
+            const campaign = activeGigDetail._fullCampaign || activeGigDetail._campaign;
+            const brand = brandProfiles[campaign?.brand_user_id];
+            return (
+              <div>
+                {/* Brand Header */}
+                <div className="p-6 border-b border-border/50">
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-14 w-14 rounded-xl ring-2 ring-border">
+                      <AvatarImage src={brand?.logo_url || undefined} className="rounded-xl" />
+                      <AvatarFallback className="rounded-xl bg-secondary text-lg font-bold">
+                        {(brand?.business_name || "B").charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h2 className="text-xl font-heading font-bold text-foreground">{campaign.title}</h2>
+                      {brand && (
+                        <p className="text-sm text-primary font-medium mt-0.5">{brand.business_name}</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                        {brand?.website_url && (
+                          <a href={brand.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                            <Globe className="h-3 w-3" /> Website <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        )}
+                        {brand?.instagram_url && (
+                          <a href={brand.instagram_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                            Instagram <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        )}
+                        {brand?.tiktok_url && (
+                          <a href={brand.tiktok_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                            TikTok <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <Badge className="bg-primary/10 text-primary border-0 text-[11px] font-bold uppercase tracking-wide shrink-0">Active</Badge>
+                  </div>
+                </div>
+
+                {/* Progress */}
+                <div className="p-6 border-b border-border/50">
+                  <h3 className="font-heading font-bold text-foreground mb-2">Your Progress</h3>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 h-3 rounded-full bg-secondary overflow-hidden">
+                      <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(100, ((activeGigDetail.videos_delivered || 0) / (campaign.expected_video_count || 1)) * 100)}%` }} />
+                    </div>
+                    <span className="text-sm font-bold text-foreground">{activeGigDetail.videos_delivered || 0}/{campaign.expected_video_count} videos</span>
+                  </div>
+                </div>
+
+                {/* About */}
+                {campaign.description && (
+                  <div className="p-6 border-b border-border/50">
+                    <h3 className="font-heading font-bold text-foreground mb-2">About this campaign</h3>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{campaign.description}</p>
+                  </div>
+                )}
+
+                {/* Budget */}
+                <div className="p-6 border-b border-border/50">
+                  <h3 className="font-heading font-bold text-foreground mb-2">Budget</h3>
+                  {campaign.is_free_product ? (
+                    <div className="flex items-center gap-2">
+                      <Gift className="h-5 w-5 text-primary" />
+                      <span className="text-lg font-bold text-foreground">Free Product</span>
+                    </div>
+                  ) : campaign.price_per_video ? (
+                    <div>
+                      <span className="text-lg font-bold text-foreground">HK${campaign.price_per_video}</span>
+                      <span className="text-sm text-muted-foreground ml-1">per video</span>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Deliverables */}
+                <div className="p-6 border-b border-border/50">
+                  <h3 className="font-heading font-bold text-foreground mb-2">Deliverables</h3>
+                  <p className="text-foreground"><span className="text-lg font-bold">{campaign.expected_video_count}</span> <span className="text-sm text-muted-foreground">video{campaign.expected_video_count > 1 ? "s" : ""}</span></p>
+                  {campaign.campaign_length_days && (
+                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {campaign.campaign_length_days} day campaign</p>
+                  )}
+                  {campaign.platforms && campaign.platforms.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1.5">Platforms</p>
+                      <div className="flex gap-2">
+                        {campaign.platforms.map((p: string) => (
+                          <Badge key={p} variant="secondary" className="capitalize">{p}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Requirements */}
+                {campaign.requirements && (
+                  <div className="p-6 border-b border-border/50">
+                    <h3 className="font-heading font-bold text-foreground mb-2">Requirements</h3>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{campaign.requirements}</p>
+                  </div>
+                )}
+
+                {/* Calendly */}
+                {campaign.calendly_enabled && campaign.calendly_link && (
+                  <div className="p-6 border-b border-border/50">
+                    <h3 className="font-heading font-bold text-foreground mb-2">Schedule a Call</h3>
+                    <a href={campaign.calendly_link} target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" className="gap-2 rounded-full">
+                        <Calendar className="h-4 w-4" /> Book via Calendly <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    </a>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="p-6">
+                  <Button variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 rounded-full"
+                    onClick={() => { setLeavingCampaign(activeGigDetail); setActiveGigDetail(null); }}>
+                    <LogOut className="h-4 w-4" /> Leave Campaign
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
