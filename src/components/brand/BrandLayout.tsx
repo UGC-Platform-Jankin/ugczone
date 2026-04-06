@@ -6,23 +6,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, LogOut, Users, Megaphone, BarChart3, User, MessageCircle, Video, Link2, Sun, Moon, Sparkles } from "lucide-react";
+import { Building2, LogOut, Users, Megaphone, BarChart3, User, MessageCircle, Sun, Moon, Sparkles, ChevronDown, ChevronRight, Video, Link2, Calendar, Settings } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarProvider,
-  SidebarTrigger,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
+  SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter,
+  SidebarProvider, SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 const BrandLayout = ({ children }: { children: React.ReactNode }) => {
@@ -32,14 +24,14 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
   const [brandProfile, setBrandProfile] = useState<any>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const unread = useUnreadMessages();
   const { theme, toggleTheme } = useTheme();
 
   const navItems = [
     { label: "Overview", icon: BarChart3, path: "/brand/dashboard", count: 0 },
     { label: "Campaigns", icon: Megaphone, path: "/brand/campaigns", count: 0 },
-    { label: "Video Review", icon: Video, path: "/brand/video-review", count: 0 },
-    { label: "Posted Videos", icon: Link2, path: "/brand/posted-videos", count: 0 },
     { label: "Messages", icon: MessageCircle, path: "/brand/messages", count: unread.total },
     { label: "Find Creators", icon: Users, path: "/brand/creators", count: 0 },
     { label: "Profile", icon: User, path: "/brand/profile", count: 0 },
@@ -52,33 +44,54 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (user) {
       supabase.from("brand_profiles").select("*").eq("user_id", user.id).single().then(({ data }) => {
-        if (!data) {
-          setNeedsOnboarding(true);
-          setOnboardingChecked(true);
-        } else {
-          setBrandProfile(data);
-          setOnboardingChecked(true);
-        }
+        if (!data) { setNeedsOnboarding(true); } else { setBrandProfile(data); }
+        setOnboardingChecked(true);
+      });
+
+      // Load campaigns for sidebar
+      supabase.from("campaigns").select("id, title, status").eq("brand_user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => {
+        setCampaigns(data || []);
+        // Auto-expand if currently viewing a campaign
+        const match = location.pathname.match(/\/brand\/campaigns\/([^/]+)/);
+        if (match && match[1] !== "new") setExpandedCampaigns(new Set([match[1]]));
       });
     }
   }, [user]);
 
-  if (loading || !onboardingChecked) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="h-8 w-8 rounded-lg bg-gradient-coral animate-pulse" />
-      </div>
-    );
-  }
+  const toggleCampaign = (id: string) => {
+    setExpandedCampaigns(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  if (loading || !onboardingChecked) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="h-8 w-8 rounded-lg bg-gradient-coral animate-pulse" /></div>;
 
   const handleOnboardingComplete = () => {
     setNeedsOnboarding(false);
-    if (user) {
-      supabase.from("brand_profiles").select("*").eq("user_id", user.id).single().then(({ data }) => {
-        if (data) setBrandProfile(data);
-      });
-    }
+    if (user) supabase.from("brand_profiles").select("*").eq("user_id", user.id).single().then(({ data }) => { if (data) setBrandProfile(data); });
   };
+
+  const campaignSubItems = [
+    { label: "Videos", icon: Video, suffix: "" },
+    { label: "Posted", icon: Link2, suffix: "/posted" },
+    { label: "Schedule", icon: Calendar, suffix: "/schedule" },
+    { label: "Settings", icon: Settings, suffix: "/settings" },
+  ];
+
+  const headerTitle = (() => {
+    const campMatch = location.pathname.match(/\/brand\/campaigns\/([^/]+)/);
+    if (campMatch && campMatch[1] !== "new") {
+      const camp = campaigns.find(c => c.id === campMatch[1]);
+      return camp?.title || "Campaign";
+    }
+    if (location.pathname === "/brand/campaigns/new") return "New Campaign";
+    return navItems.find(n => location.pathname === n.path)?.label || "Brand Portal";
+  })();
+
+  const activeCampaigns = campaigns.filter(c => c.status === "active");
+  const endedCampaigns = campaigns.filter(c => c.status === "ended");
 
   return (
     <SidebarProvider>
@@ -102,7 +115,6 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
             </Link>
           </SidebarHeader>
 
-          {/* Brand profile card */}
           <div className="px-4 py-3 mx-3 mt-4 rounded-xl bg-sidebar-accent border border-sidebar-border">
             <div className="flex items-center gap-3">
               <Avatar className="w-10 h-10 rounded-lg">
@@ -112,9 +124,7 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm text-sidebar-foreground truncate">
-                  {brandProfile?.business_name || "Brand"}
-                </p>
+                <p className="font-medium text-sm text-sidebar-foreground truncate">{brandProfile?.business_name || "Brand"}</p>
                 <p className="text-[11px] text-sidebar-foreground/50">Brand Account</p>
               </div>
             </div>
@@ -133,20 +143,13 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
                             to={item.path}
                             className={cn(
                               "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200",
-                              isActive
-                                ? "bg-primary text-primary-foreground shadow-coral font-semibold"
-                                : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                              isActive ? "bg-primary text-primary-foreground shadow-coral font-semibold" : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                             )}
                           >
                             <item.icon className="w-4 h-4 shrink-0" />
                             <span className="flex-1 text-[13px] truncate">{item.label}</span>
                             {item.count > 0 && (
-                              <Badge className={cn(
-                                "h-5 min-w-[20px] px-1.5 text-[11px] font-bold border-0",
-                                isActive
-                                  ? "bg-primary-foreground/20 text-primary-foreground"
-                                  : "bg-primary text-primary-foreground"
-                              )}>
+                              <Badge className={cn("h-5 min-w-[20px] px-1.5 text-[11px] font-bold border-0", isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary text-primary-foreground")}>
                                 {item.count > 99 ? "99+" : item.count}
                               </Badge>
                             )}
@@ -155,27 +158,71 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
                       </SidebarMenuItem>
                     );
                   })}
+
+                  {/* Active Campaigns - expandable */}
+                  {activeCampaigns.length > 0 && (
+                    <>
+                      <div className="pt-3 pb-1 px-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/40">Active Campaigns</p>
+                      </div>
+                      {activeCampaigns.map(camp => {
+                        const isExpanded = expandedCampaigns.has(camp.id);
+                        const isCampActive = location.pathname.startsWith(`/brand/campaigns/${camp.id}`);
+                        return (
+                          <div key={camp.id}>
+                            <SidebarMenuItem>
+                              <button
+                                onClick={() => toggleCampaign(camp.id)}
+                                className={cn(
+                                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 text-left",
+                                  isCampActive ? "bg-primary/10 text-primary font-semibold" : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                                )}
+                              >
+                                <Megaphone className="w-4 h-4 shrink-0" />
+                                <span className="flex-1 text-[13px] truncate">{camp.title}</span>
+                                {isExpanded ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
+                              </button>
+                            </SidebarMenuItem>
+                            {isExpanded && (
+                              <div className="ml-4 space-y-0.5">
+                                {campaignSubItems.map(sub => {
+                                  const subPath = `/brand/campaigns/${camp.id}${sub.suffix}`;
+                                  const isSubActive = location.pathname === subPath;
+                                  return (
+                                    <SidebarMenuItem key={sub.suffix}>
+                                      <SidebarMenuButton asChild>
+                                        <NavLink
+                                          to={subPath}
+                                          className={cn(
+                                            "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 text-[12px]",
+                                            isSubActive ? "bg-primary text-primary-foreground font-semibold" : "text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                                          )}
+                                        >
+                                          <sub.icon className="w-3.5 h-3.5 shrink-0" />
+                                          <span>{sub.label}</span>
+                                        </NavLink>
+                                      </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
 
           <SidebarFooter className="p-3 border-t border-sidebar-border space-y-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start gap-3 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent text-[13px] h-9 rounded-lg"
-              onClick={toggleTheme}
-            >
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-3 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent text-[13px] h-9 rounded-lg" onClick={toggleTheme}>
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               {theme === "dark" ? "Light Mode" : "Dark Mode"}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start gap-3 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent text-[13px] h-9 rounded-lg"
-              onClick={() => signOut().then(() => navigate("/"))}
-            >
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-3 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent text-[13px] h-9 rounded-lg" onClick={() => signOut().then(() => navigate("/"))}>
               <LogOut className="h-4 w-4" />
               Sign Out
             </Button>
@@ -189,17 +236,11 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
               <div className="w-7 h-7 rounded-lg bg-gradient-coral flex items-center justify-center shadow-coral">
                 <Sparkles className="w-3.5 h-3.5 text-white" />
               </div>
-              <h1 className="font-heading font-bold text-base md:text-lg text-foreground truncate">
-                {navItems.find((n) => location.pathname === n.path)?.label || "Brand Portal"}
-              </h1>
+              <h1 className="font-heading font-bold text-base md:text-lg text-foreground truncate">{headerTitle}</h1>
             </div>
-            <div className="ml-auto">
-              <NotificationBell />
-            </div>
+            <div className="ml-auto"><NotificationBell /></div>
           </header>
-          <div className="flex-1 p-3 md:p-6 overflow-auto bg-mesh">
-            {children}
-          </div>
+          <div className="flex-1 p-3 md:p-6 overflow-auto bg-mesh">{children}</div>
         </main>
       </div>
     </SidebarProvider>
