@@ -63,6 +63,7 @@ const FindCreators = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [followerFilter, setFollowerFilter] = useState<number>(0);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [inviteCreator, setInviteCreator] = useState<Creator | null>(null);
@@ -98,11 +99,18 @@ const FindCreators = () => {
         collabMap[c.user_id].push(c.brand_name);
       });
 
-      const creatorList: Creator[] = profiles.map((p: any) => ({
-        ...p,
-        socials: socialMap[p.user_id] || [],
-        past_collabs: collabMap[p.user_id] || [],
-      }));
+      const creatorList: Creator[] = profiles
+        .filter((p: any) => {
+          // Only show creators with a name and at least one social connection
+          const hasSocials = (socialMap[p.user_id] || []).length > 0;
+          const hasName = !!(p.display_name && p.display_name.trim());
+          return hasSocials && hasName;
+        })
+        .map((p: any) => ({
+          ...p,
+          socials: socialMap[p.user_id] || [],
+          past_collabs: collabMap[p.user_id] || [],
+        }));
 
       setCreators(creatorList);
       setFiltered(creatorList);
@@ -151,17 +159,27 @@ const FindCreators = () => {
       result = result.filter((c) => c.socials.some((s) => s.platform === platformFilter));
     }
 
+    if (categoryFilter !== "all") {
+      result = result.filter((c) => (c.content_types || []).includes(categoryFilter));
+    }
+
     const range = followerRanges[followerFilter];
     if (range && range.min > 0) {
+      // Check if at least one platform (matching platform filter) has followers in range
       result = result.filter((c) => {
-        const total = c.socials.reduce((sum, s) => sum + (s.followers_count || 0), 0);
-        return total >= range.min && total < range.max;
+        const relevantSocials = platformFilter !== "all" 
+          ? c.socials.filter(s => s.platform === platformFilter)
+          : c.socials;
+        return relevantSocials.some(s => {
+          const count = s.followers_count || 0;
+          return count >= range.min && count < range.max;
+        });
       });
     }
 
     result.sort((a, b) => (creatorMatches[b.user_id] || 0) - (creatorMatches[a.user_id] || 0));
     setFiltered(result);
-  }, [search, creators, platformFilter, followerFilter, creatorMatches]);
+  }, [search, creators, platformFilter, followerFilter, categoryFilter, creatorMatches]);
 
   const handleInvite = async () => {
     if (!user || !inviteCreator || !selectedCampaignId) return;
@@ -218,7 +236,7 @@ const FindCreators = () => {
   };
 
   const totalFollowers = (c: Creator) => c.socials.reduce((sum, s) => sum + (s.followers_count || 0), 0);
-  const hasActiveFilters = platformFilter !== "all" || followerFilter !== 0 || search.trim() !== "";
+  const hasActiveFilters = platformFilter !== "all" || followerFilter !== 0 || categoryFilter !== "all" || search.trim() !== "";
 
   const handleViewCreator = async (creator: Creator) => {
     setViewingCreator(creator);
