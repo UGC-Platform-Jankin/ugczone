@@ -765,14 +765,59 @@ const Messages = () => {
                         )}
                         {renderAttachment(msg)}
                         {inviteMatch && !isMe && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="mt-2 gap-1 text-xs h-7"
-                            onClick={() => navigate("/dashboard")}
-                          >
-                            View Campaign & Apply →
-                          </Button>
+                          <div className="mt-2 flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="gap-1 text-xs h-7"
+                              onClick={() => navigate(`/dashboard/gigs`)}
+                            >
+                              View Gig
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="gap-1 text-xs h-7 bg-emerald-600 hover:bg-emerald-700 text-white"
+                              onClick={async () => {
+                                if (!user || !inviteMatch[1]) return;
+                                // Check if already applied
+                                const { data: existing } = await supabase.from("campaign_applications").select("id").eq("campaign_id", inviteMatch[1]).eq("creator_user_id", user.id).maybeSingle();
+                                if (existing) {
+                                  return;
+                                }
+                                // Auto-accept: create application with accepted status
+                                await supabase.from("campaign_applications").insert({
+                                  campaign_id: inviteMatch[1],
+                                  creator_user_id: user.id,
+                                  cover_letter: "Accepted campaign invite",
+                                  status: "accepted",
+                                } as any);
+                                // Update invite status
+                                await supabase.from("campaign_invites").update({ status: "accepted" } as any).eq("campaign_id", inviteMatch[1]).eq("creator_user_id", user.id);
+                                // Notify brand
+                                const { data: camp } = await supabase.from("campaigns").select("brand_user_id, title").eq("id", inviteMatch[1]).single();
+                                if (camp) {
+                                  const { data: prof } = await supabase.from("profiles").select("display_name").eq("user_id", user.id).maybeSingle();
+                                  await supabase.from("notifications").insert({
+                                    user_id: camp.brand_user_id,
+                                    type: "invite_accepted",
+                                    title: "Invite Accepted!",
+                                    body: `${prof?.display_name || "A creator"} accepted your invite to "${camp.title}"`,
+                                    link: `/brand/campaigns/${inviteMatch[1]}`,
+                                  });
+                                }
+                                // Send confirmation message in chat
+                                if (selectedRoom) {
+                                  await supabase.from("messages").insert({
+                                    chat_room_id: selectedRoom.id,
+                                    sender_id: user.id,
+                                    content: "✅ I've accepted the campaign invite!",
+                                  } as any);
+                                }
+                              }}
+                            >
+                              <CheckIcon className="h-3 w-3" /> Accept Invite
+                            </Button>
+                          </div>
                         )}
                       </div>
                       <div className="flex items-center gap-1 mt-0.5 mx-1">
