@@ -87,16 +87,20 @@ const Gigs = () => {
         supabase.from("campaigns").select("*").eq("status", "active").order("created_at", { ascending: false }),
         user ? supabase.from("campaign_applications").select("*").eq("creator_user_id", user.id) : Promise.resolve({ data: [] }),
       ]);
-      const allCampaigns = (campaignsRes.data as Campaign[]) || [];
-      setCampaigns(allCampaigns);
+      const allCampaignsRaw = (campaignsRes.data as Campaign[]) || [];
 
-      const brandUserIds = [...new Set(allCampaigns.map(c => c.brand_user_id))] as string[];
+      // Fetch brand profiles and filter out campaigns with no existing brand
+      const brandUserIds = [...new Set(allCampaignsRaw.map(c => c.brand_user_id))] as string[];
+      let brandMap: Record<string, any> = {};
       if (brandUserIds.length > 0) {
         const { data: brands } = await supabase.from("brand_profiles").select("user_id, business_name, logo_url, website_url, instagram_url, tiktok_url").in("user_id", brandUserIds);
-        const brandMap: Record<string, any> = {};
         (brands || []).forEach((b: any) => { brandMap[b.user_id] = b; });
-        setBrandProfiles(brandMap);
       }
+      setBrandProfiles(brandMap);
+
+      // Only show campaigns where the brand profile still exists
+      const allCampaigns = allCampaignsRaw.filter(c => brandMap[c.brand_user_id]);
+      setCampaigns(allCampaigns);
 
       // Get application counts per campaign
       const campIds = allCampaigns.map(c => c.id);
