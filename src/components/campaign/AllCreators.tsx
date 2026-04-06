@@ -58,14 +58,16 @@ const AllCreators = ({ campaignId }: Props) => {
     if (apps.length === 0) { setCreators([]); setLoading(false); return; }
 
     const creatorIds = [...new Set(apps.map((a: any) => a.creator_user_id))] as string[];
-    const [profilesRes, socialsRes, subsRes, linksRes] = await Promise.all([
+    const [profilesRes, socialsRes, subsRes, linksRes, emailsRes] = await Promise.all([
       supabase.from("profiles").select("*").in("user_id", creatorIds),
       supabase.from("social_connections").select("*").in("user_id", creatorIds),
       supabase.from("video_submissions").select("*").eq("campaign_id", campaignId).order("created_at", { ascending: false }),
       supabase.from("posted_video_links").select("*, video_submissions!inner(campaign_id, creator_user_id)").eq("video_submissions.campaign_id", campaignId),
+      supabase.rpc("get_campaign_creator_emails", { _campaign_id: campaignId }),
     ]);
 
-    // Get emails from auth - we'll use profiles for now
+    const emailMap: Record<string, string> = {};
+    ((emailsRes.data as any) || []).forEach((e: any) => { emailMap[e.user_id] = e.email; });
     const profileMap: Record<string, any> = {};
     (profilesRes.data || []).forEach((p: any) => { profileMap[p.user_id] = p; });
     const socialMap: Record<string, any[]> = {};
