@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Users, Search, Send, Loader2, Instagram, Facebook, Video, Filter, X, Eye, Globe, Briefcase, Sparkles } from "lucide-react";
@@ -433,30 +433,27 @@ const FindCreators = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Creator Full Profile Sheet */}
-      <Sheet open={!!viewingCreator} onOpenChange={(open) => { if (!open) setViewingCreator(null); }}>
-        <SheetContent className="w-96 sm:w-[28rem] bg-card border-border/50 p-0">
-          <SheetHeader className="p-4 border-b border-border/30">
-            <SheetTitle className="text-base font-heading">Creator Profile</SheetTitle>
-          </SheetHeader>
-          <ScrollArea className="h-[calc(100vh-4rem)]">
-            {viewingCreator && (
-              <div className="p-5 space-y-5">
-                {/* Avatar + Name */}
-                <div className="flex flex-col items-center text-center">
-                  <Avatar className="h-24 w-24 ring-2 ring-border/30">
-                    <AvatarImage src={viewingCreator.avatar_url || undefined} />
-                    <AvatarFallback className="bg-secondary text-2xl font-semibold">
-                      {(viewingCreator.display_name || "?").charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <h3 className="text-xl font-heading font-bold text-foreground mt-3">
-                    {viewingCreator.display_name || "Creator"}
-                  </h3>
-                  {viewingCreator.username && (
-                    <p className="text-sm text-muted-foreground">@{viewingCreator.username}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+      {/* Creator Full Profile Dialog */}
+      <Dialog open={!!viewingCreator} onOpenChange={(open) => { if (!open) setViewingCreator(null); }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl p-0">
+          {viewingCreator && (
+            <div>
+              {/* Hero banner */}
+              <div className="h-32 bg-gradient-to-br from-secondary via-secondary/60 to-muted flex items-end justify-center pb-0 relative">
+                <Avatar className="h-24 w-24 ring-4 ring-card shadow-lg translate-y-12">
+                  <AvatarImage src={viewingCreator.avatar_url || undefined} />
+                  <AvatarFallback className="bg-card text-2xl font-bold text-foreground">
+                    {(viewingCreator.display_name || "?").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+
+              <div className="px-6 pt-16 pb-6 space-y-5">
+                {/* Name + meta */}
+                <div className="text-center">
+                  <h2 className="text-xl font-heading font-bold text-foreground">{viewingCreator.display_name || "Creator"}</h2>
+                  {viewingCreator.username && <p className="text-sm text-muted-foreground">@{viewingCreator.username}</p>}
+                  <div className="flex items-center justify-center gap-3 mt-1 text-xs text-muted-foreground">
                     {viewingCreator.gender && <span>{viewingCreator.gender}</span>}
                     {viewingCreator.country && <span className="flex items-center gap-0.5">📍 {viewingCreator.country}</span>}
                   </div>
@@ -494,7 +491,7 @@ const FindCreators = () => {
                     <Separator />
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-3">Platforms</p>
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {creatorSocialDetails.map((s: any) => {
                           const Icon = platformIcons[s.platform] || Users;
                           const color = platformColors[s.platform] || "text-foreground";
@@ -538,7 +535,7 @@ const FindCreators = () => {
                     <Separator />
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-2">Past Collaborations</p>
-                      <div className="space-y-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {creatorCollabs.map((c: any) => (
                           <div key={c.id} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-secondary/30">
                             <Briefcase className="h-4 w-4 text-primary mt-0.5 shrink-0" />
@@ -559,10 +556,10 @@ const FindCreators = () => {
                   <Send className="h-4 w-4" /> Invite to Campaign
                 </Button>
               </div>
-            )}
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
