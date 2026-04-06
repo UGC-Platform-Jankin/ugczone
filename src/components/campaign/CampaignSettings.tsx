@@ -484,79 +484,174 @@ const CampaignSettings = ({ campaignId }: Props) => {
         </Card>
       </div>
 
-      {/* Applications */}
+      {/* Current Creators */}
       <div>
-        <h3 className="font-medium text-foreground mb-3 flex items-center gap-2"><Users className="h-4 w-4" /> Applications</h3>
+        <h3 className="font-medium text-foreground mb-3 flex items-center gap-2"><Users className="h-4 w-4" /> Current Creators</h3>
         {loadingApps ? (
           <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : applications.length === 0 ? (
-          <Card className="border-border/50 border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground text-sm">No applications yet</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {applications.map((app) => (
-              <Card key={app.id} className="border-border/50">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={app._profile?.avatar_url} />
-                          <AvatarFallback className="bg-secondary text-xs">{(app._profile?.display_name || "U").charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
+        ) : (() => {
+          const current = applications.filter(a => a.status === "accepted");
+          return current.length === 0 ? (
+            <Card className="border-border/50 border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-8">
+                <p className="text-muted-foreground text-sm">No active creators</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {current.map((app) => {
+                const creatorSubs = videoSubmissions.filter(s => s.creator_user_id === app.creator_user_id);
+                const accepted = creatorSubs.filter(s => s.status === "accepted").length;
+                const pending = creatorSubs.filter(s => s.status === "pending").length;
+                return (
+                  <Card key={app.id} className="border-border/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-foreground text-sm">{app._profile?.display_name || app._profile?.username || "Creator"}</p>
-                            <Badge variant={app.status === "pending" ? "outline" : app.status === "accepted" ? "default" : "destructive"} className="text-xs capitalize">{app.status}</Badge>
+                          <div className="flex items-center gap-3 mb-2">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={app._profile?.avatar_url} />
+                              <AvatarFallback className="bg-secondary text-xs">{(app._profile?.display_name || "U").charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-foreground text-sm">{app._profile?.display_name || app._profile?.username || "Creator"}</p>
+                              <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                                {app._profile?.username && <span>@{app._profile.username}</span>}
+                                <span>Joined {new Date(app.created_at).toLocaleDateString()}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {app._profile?.username && <span className="text-xs text-muted-foreground">@{app._profile.username}</span>}
-                            <span className="text-xs text-muted-foreground">{new Date(app.created_at).toLocaleDateString()}</span>
+                          <div className="flex gap-2 text-xs flex-wrap">
+                            <Badge variant="secondary">{accepted} accepted</Badge>
+                            {pending > 0 && <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-500 dark:border-yellow-500/30">{pending} pending</Badge>}
+                            <Badge variant="outline">{creatorSubs.length} total submitted</Badge>
+                          </div>
+                          {app._socials?.length > 0 && (
+                            <div className="flex gap-1.5 mt-2 flex-wrap">
+                              {app._socials.map((s: any) => {
+                                const Icon = platformIcons[s.platform] || Users;
+                                return (
+                                  <Badge key={s.id} variant="secondary" className="text-xs gap-1">
+                                    <Icon className="h-3 w-3" /> {s.platform} · {s.followers_count?.toLocaleString() || 0}
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <Button variant="link" size="sm" className="px-0 mt-1 h-auto" onClick={() => viewCreatorProfile(app.creator_user_id)}>
+                            View Full Profile →
+                          </Button>
+                        </div>
+                        <Button size="sm" variant="outline" className="text-destructive hover:text-destructive shrink-0" onClick={() => { setRemovingCreator(app); setRemovalMessage(""); }}>
+                          <X className="h-4 w-4 mr-1" /> Remove
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Applications (Pending) */}
+      {(() => {
+        const pending = applications.filter(a => a.status === "pending");
+        if (pending.length === 0) return null;
+        return (
+          <div>
+            <h3 className="font-medium text-foreground mb-3 flex items-center gap-2"><Users className="h-4 w-4" /> Pending Applications ({pending.length})</h3>
+            <div className="space-y-3">
+              {pending.map((app) => (
+                <Card key={app.id} className="border-border/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={app._profile?.avatar_url} />
+                            <AvatarFallback className="bg-secondary text-xs">{(app._profile?.display_name || "U").charAt(0).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground text-sm">{app._profile?.display_name || app._profile?.username || "Creator"}</p>
+                            <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                              {app._profile?.username && <span>@{app._profile.username}</span>}
+                              <span>{new Date(app.created_at).toLocaleDateString()}</span>
+                            </div>
                           </div>
                         </div>
+                        {app._socials?.length > 0 && (
+                          <div className="flex gap-1.5 mb-2 flex-wrap">
+                            {app._socials.map((s: any) => {
+                              const Icon = platformIcons[s.platform] || Users;
+                              return (
+                                <Badge key={s.id} variant="secondary" className="text-xs gap-1">
+                                  <Icon className="h-3 w-3" /> {s.platform} · {s.followers_count?.toLocaleString() || 0}
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <p className="text-sm text-muted-foreground line-clamp-3">{app.cover_letter}</p>
+                        <Button variant="link" size="sm" className="px-0 mt-1 h-auto" onClick={() => viewCreatorProfile(app.creator_user_id)}>
+                          View Full Profile →
+                        </Button>
                       </div>
-                      {app._socials?.length > 0 && (
-                        <div className="flex gap-1.5 mb-2 flex-wrap">
-                          {app._socials.map((s: any) => {
-                            const Icon = platformIcons[s.platform] || Users;
-                            return (
-                              <Badge key={s.id} variant="secondary" className="text-xs gap-1">
-                                <Icon className="h-3 w-3" /> {s.platform} · {s.followers_count?.toLocaleString() || 0}
-                              </Badge>
-                            );
-                          })}
+                      {campaign.status === "active" && (
+                        <div className="flex gap-2 shrink-0">
+                          <Button size="sm" variant="outline" className="text-emerald-600 hover:text-emerald-500" disabled={updatingApp === app.id} onClick={() => handleApplicationAction(app.id, "accepted", app)}>
+                            {updatingApp === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" disabled={updatingApp === app.id} onClick={() => handleApplicationAction(app.id, "rejected", app)}>
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
                       )}
-                      <p className="text-sm text-muted-foreground line-clamp-3">{app.cover_letter}</p>
-                      <Button variant="link" size="sm" className="px-0 mt-1 h-auto" onClick={() => viewCreatorProfile(app.creator_user_id)}>
-                        View Full Profile →
-                      </Button>
                     </div>
-                    {app.status === "pending" && campaign.status === "active" && (
-                      <div className="flex gap-2 shrink-0">
-                        <Button size="sm" variant="outline" className="text-green-500 hover:text-green-400" disabled={updatingApp === app.id} onClick={() => handleApplicationAction(app.id, "accepted", app)}>
-                          {updatingApp === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" disabled={updatingApp === app.id} onClick={() => handleApplicationAction(app.id, "rejected", app)}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                    {app.status === "accepted" && (
-                      <Button size="sm" variant="outline" className="text-destructive hover:text-destructive shrink-0" onClick={() => setRemovingCreator(app)}>
-                        <X className="h-4 w-4 mr-1" /> Remove
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
+        );
+      })()}
+
+      {/* Past Creators */}
+      {(() => {
+        const past = applications.filter(a => ["removed", "rejected"].includes(a.status));
+        if (past.length === 0) return null;
+        return (
+          <div>
+            <h3 className="font-medium text-muted-foreground mb-3 flex items-center gap-2"><Users className="h-4 w-4" /> Past Creators ({past.length})</h3>
+            <div className="space-y-2">
+              {past.map((app) => {
+                const creatorSubs = videoSubmissions.filter(s => s.creator_user_id === app.creator_user_id);
+                const accepted = creatorSubs.filter(s => s.status === "accepted").length;
+                return (
+                  <Card key={app.id} className="border-border/50 opacity-70">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={app._profile?.avatar_url} />
+                            <AvatarFallback className="bg-secondary text-xs">{(app._profile?.display_name || "U").charAt(0).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-foreground text-sm">{app._profile?.display_name || app._profile?.username || "Creator"}</p>
+                            <p className="text-xs text-muted-foreground">{accepted} video{accepted !== 1 ? "s" : ""} delivered · {creatorSubs.length} submitted</p>
+                          </div>
+                        </div>
+                        <Badge variant="destructive" className="text-xs capitalize">{app.status}</Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Creator Profile Dialog */}
       <Dialog open={!!viewingCreator} onOpenChange={(open) => !open && setViewingCreator(null)}>
