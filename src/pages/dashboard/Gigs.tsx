@@ -54,6 +54,7 @@ const Gigs = () => {
   const [activeMemberships, setActiveMemberships] = useState<any[]>([]);
   const [leavingCampaign, setLeavingCampaign] = useState<any>(null);
   const [leavingLoading, setLeavingLoading] = useState(false);
+  const [leaveReason, setLeaveReason] = useState("");
   const [brandProfiles, setBrandProfiles] = useState<Record<string, any>>({});
   const [activeTab, setActiveTab] = useState<TabFilter>("available");
   const [creatorProfile, setCreatorProfile] = useState<any>(null);
@@ -200,8 +201,12 @@ const Gigs = () => {
   };
 
   const handleLeaveCampaign = async () => {
-    if (!leavingCampaign || !user) return;
+    if (!leavingCampaign || !user || !leaveReason.trim()) {
+      toast({ title: "Please provide a reason for leaving", variant: "destructive" });
+      return;
+    }
     setLeavingLoading(true);
+    const reason = leaveReason.trim();
     await supabase.from("campaign_applications").update({ status: "left" } as any).eq("id", leavingCampaign.id);
     const { data: groupRoom } = await supabase.from("chat_rooms").select("id").eq("campaign_id", leavingCampaign.campaign_id).eq("type", "group").maybeSingle();
     if (groupRoom) {
@@ -219,7 +224,7 @@ const Gigs = () => {
           if (pIds.includes(user.id) && pIds.includes(brandUserId)) {
             await supabase.from("messages").insert({
               chat_room_id: room.id, sender_id: user.id,
-              content: `I've left the campaign "${leavingCampaign._campaign?.title}". Videos delivered: ${leavingCampaign.videos_delivered || 0}. Thanks for the opportunity!`,
+              content: `I've left the campaign "${leavingCampaign._campaign?.title}".\n\nReason: ${reason}\n\nVideos delivered: ${leavingCampaign.videos_delivered || 0}`,
             } as any);
             break;
           }
@@ -228,11 +233,12 @@ const Gigs = () => {
     }
     await supabase.from("notifications").insert({
       user_id: leavingCampaign._campaign?.brand_user_id || "", type: "application_update", title: "Creator Left Campaign",
-      body: `A creator has left "${leavingCampaign._campaign?.title || "your campaign"}". Videos delivered: ${leavingCampaign.videos_delivered || 0}`, link: "/brand/campaigns",
+      body: `A creator has left "${leavingCampaign._campaign?.title || "your campaign"}". Reason: ${reason}. Videos delivered: ${leavingCampaign.videos_delivered || 0}`, link: "/brand/campaigns",
     });
     setActiveMemberships((prev) => prev.filter((m) => m.id !== leavingCampaign.id));
     toast({ title: "You've left the campaign" });
     setLeavingCampaign(null);
+    setLeaveReason("");
     setLeavingLoading(false);
   };
 
