@@ -5,24 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import CreatorOnboarding from "@/components/onboarding/CreatorOnboarding";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Briefcase, User, LogOut, MessageCircle, Shield, Video, Link2, LayoutDashboard, Sun, Moon, Sparkles } from "lucide-react";
+import { Briefcase, User, LogOut, MessageCircle, Shield, LayoutDashboard, Sun, Moon, Sparkles, ChevronDown, ChevronRight, Video, Link2, Calendar } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import { supabase } from "@/integrations/supabase/client";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarProvider,
-  SidebarTrigger,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
+  SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter,
+  SidebarProvider, SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
@@ -33,14 +25,14 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<any>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [activeGigs, setActiveGigs] = useState<any[]>([]);
+  const [expandedGigs, setExpandedGigs] = useState<Set<string>>(new Set());
   const unread = useUnreadMessages();
   const { theme, toggleTheme } = useTheme();
 
   const navItems = [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard", count: 0 },
     { label: "Gigs", icon: Briefcase, path: "/dashboard/gigs", count: 0 },
-    { label: "Videos", icon: Video, path: "/dashboard/videos", count: 0 },
-    { label: "Posted Videos", icon: Link2, path: "/dashboard/posted-videos", count: 0 },
     { label: "Messages", icon: MessageCircle, path: "/dashboard/messages", count: unread.total },
     { label: "Profile", icon: User, path: "/dashboard/profile", count: 0 },
   ];
@@ -51,49 +43,67 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("user_roles" as any).select("role").eq("user_id", user.id).eq("role", "admin").then(({ data }) => {
+    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").then(({ data }) => {
       if (data && (data as any[]).length > 0) setIsAdmin(true);
     });
     supabase.from("profiles").select("display_name, username, avatar_url, bio, content_types").eq("user_id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
         setProfile(data);
         const hasProfile = data.display_name && data.bio && (data as any).content_types?.length > 0;
-        if (!hasProfile) {
-          // Also check if they have at least one social
-          supabase.from("social_connections").select("id").eq("user_id", user.id).limit(1).then(({ data: socials }) => {
-            setNeedsOnboarding(!hasProfile || !socials?.length);
-            setOnboardingChecked(true);
-          });
-        } else {
-          supabase.from("social_connections").select("id").eq("user_id", user.id).limit(1).then(({ data: socials }) => {
-            setNeedsOnboarding(!socials?.length);
-            setOnboardingChecked(true);
-          });
-        }
+        supabase.from("social_connections").select("id").eq("user_id", user.id).limit(1).then(({ data: socials }) => {
+          setNeedsOnboarding(!hasProfile || !socials?.length);
+          setOnboardingChecked(true);
+        });
       } else {
         setNeedsOnboarding(true);
         setOnboardingChecked(true);
       }
     });
+
+    // Load active gigs for sidebar
+    supabase.from("campaign_applications").select("campaign_id").eq("creator_user_id", user.id).eq("status", "accepted").then(async ({ data: apps }) => {
+      if (!apps?.length) return;
+      const campIds = apps.map((a: any) => a.campaign_id);
+      const { data: camps } = await supabase.from("campaigns").select("id, title").in("id", campIds);
+      setActiveGigs(camps || []);
+      // Auto-expand if currently viewing a gig
+      const match = location.pathname.match(/\/dashboard\/gig\/([^/]+)/);
+      if (match) setExpandedGigs(new Set([match[1]]));
+    });
   }, [user]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="h-8 w-8 rounded-lg bg-gradient-coral animate-pulse" />
-      </div>
-    );
-  }
+  const toggleGig = (id: string) => {
+    setExpandedGigs(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="h-8 w-8 rounded-lg bg-gradient-coral animate-pulse" /></div>;
   if (!user) return null;
 
   const handleOnboardingComplete = () => {
     setNeedsOnboarding(false);
-    // Refresh profile
     supabase.from("profiles").select("display_name, username, avatar_url, bio, content_types").eq("user_id", user.id).maybeSingle().then(({ data }) => {
       if (data) setProfile(data);
     });
   };
+
+  const gigSubItems = [
+    { label: "Videos", icon: Video, suffix: "" },
+    { label: "Posted", icon: Link2, suffix: "/posted" },
+    { label: "Schedule", icon: Calendar, suffix: "/schedule" },
+  ];
+
+  const headerTitle = (() => {
+    const gigMatch = location.pathname.match(/\/dashboard\/gig\/([^/]+)/);
+    if (gigMatch) {
+      const gig = activeGigs.find(g => g.id === gigMatch[1]);
+      return gig?.title || "Gig";
+    }
+    return navItems.find(n => location.pathname === n.path)?.label || (location.pathname === "/dashboard/admin" ? "Admin" : "Dashboard");
+  })();
 
   return (
     <SidebarProvider>
@@ -117,7 +127,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             </Link>
           </SidebarHeader>
 
-          {/* User profile card */}
           <div className="px-4 py-3 mx-3 mt-4 rounded-xl bg-sidebar-accent border border-sidebar-border">
             <div className="flex items-center gap-3">
               <Avatar className="w-10 h-10 rounded-lg">
@@ -127,9 +136,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm text-sidebar-foreground truncate">
-                  {profile?.display_name || profile?.username || "Creator"}
-                </p>
+                <p className="font-medium text-sm text-sidebar-foreground truncate">{profile?.display_name || profile?.username || "Creator"}</p>
                 <p className="text-[11px] text-sidebar-foreground/50">Creator Account</p>
               </div>
             </div>
@@ -149,20 +156,13 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                             end={item.path === "/dashboard"}
                             className={cn(
                               "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200",
-                              isActive
-                                ? "bg-primary text-primary-foreground shadow-coral font-semibold"
-                                : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                              isActive ? "bg-primary text-primary-foreground shadow-coral font-semibold" : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                             )}
                           >
                             <item.icon className="w-4 h-4 shrink-0" />
                             <span className="flex-1 text-[13px] truncate">{item.label}</span>
                             {item.count > 0 && (
-                              <Badge className={cn(
-                                "h-5 min-w-[20px] px-1.5 text-[11px] font-bold border-0",
-                                isActive
-                                  ? "bg-primary-foreground/20 text-primary-foreground"
-                                  : "bg-primary text-primary-foreground"
-                              )}>
+                              <Badge className={cn("h-5 min-w-[20px] px-1.5 text-[11px] font-bold border-0", isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary text-primary-foreground")}>
                                 {item.count > 99 ? "99+" : item.count}
                               </Badge>
                             )}
@@ -171,6 +171,61 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                       </SidebarMenuItem>
                     );
                   })}
+
+                  {/* Active Gigs - expandable */}
+                  {activeGigs.length > 0 && (
+                    <>
+                      <div className="pt-3 pb-1 px-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/40">Active Gigs</p>
+                      </div>
+                      {activeGigs.map(gig => {
+                        const isExpanded = expandedGigs.has(gig.id);
+                        const isGigActive = location.pathname.startsWith(`/dashboard/gig/${gig.id}`);
+                        return (
+                          <div key={gig.id}>
+                            <SidebarMenuItem>
+                              <button
+                                onClick={() => toggleGig(gig.id)}
+                                className={cn(
+                                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 text-left",
+                                  isGigActive ? "bg-primary/10 text-primary font-semibold" : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                                )}
+                              >
+                                <Briefcase className="w-4 h-4 shrink-0" />
+                                <span className="flex-1 text-[13px] truncate">{gig.title}</span>
+                                {isExpanded ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
+                              </button>
+                            </SidebarMenuItem>
+                            {isExpanded && (
+                              <div className="ml-4 space-y-0.5">
+                                {gigSubItems.map(sub => {
+                                  const subPath = `/dashboard/gig/${gig.id}${sub.suffix}`;
+                                  const isSubActive = location.pathname === subPath;
+                                  return (
+                                    <SidebarMenuItem key={sub.suffix}>
+                                      <SidebarMenuButton asChild>
+                                        <NavLink
+                                          to={subPath}
+                                          className={cn(
+                                            "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 text-[12px]",
+                                            isSubActive ? "bg-primary text-primary-foreground font-semibold" : "text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                                          )}
+                                        >
+                                          <sub.icon className="w-3.5 h-3.5 shrink-0" />
+                                          <span>{sub.label}</span>
+                                        </NavLink>
+                                      </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+
                   {isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild>
@@ -178,9 +233,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                           to="/dashboard/admin"
                           className={cn(
                             "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200",
-                            location.pathname === "/dashboard/admin"
-                              ? "bg-primary text-primary-foreground shadow-coral font-semibold"
-                              : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                            location.pathname === "/dashboard/admin" ? "bg-primary text-primary-foreground shadow-coral font-semibold" : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                           )}
                         >
                           <Shield className="w-4 h-4 shrink-0" />
@@ -195,21 +248,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           </SidebarContent>
 
           <SidebarFooter className="p-3 border-t border-sidebar-border space-y-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start gap-3 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent text-[13px] h-9 rounded-lg"
-              onClick={toggleTheme}
-            >
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-3 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent text-[13px] h-9 rounded-lg" onClick={toggleTheme}>
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               {theme === "dark" ? "Light Mode" : "Dark Mode"}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start gap-3 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent text-[13px] h-9 rounded-lg"
-              onClick={() => signOut().then(() => navigate("/"))}
-            >
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-3 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent text-[13px] h-9 rounded-lg" onClick={() => signOut().then(() => navigate("/"))}>
               <LogOut className="h-4 w-4" />
               Sign Out
             </Button>
@@ -223,17 +266,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               <div className="w-7 h-7 rounded-lg bg-gradient-coral flex items-center justify-center shadow-coral">
                 <Sparkles className="w-3.5 h-3.5 text-white" />
               </div>
-              <h1 className="font-heading font-bold text-base md:text-lg text-foreground truncate">
-                {navItems.find((n) => location.pathname === n.path)?.label || (location.pathname === "/dashboard/admin" ? "Admin" : "Dashboard")}
-              </h1>
+              <h1 className="font-heading font-bold text-base md:text-lg text-foreground truncate">{headerTitle}</h1>
             </div>
-            <div className="ml-auto">
-              <NotificationBell />
-            </div>
+            <div className="ml-auto"><NotificationBell /></div>
           </header>
-          <div className="flex-1 p-3 md:p-6 overflow-auto bg-mesh">
-            {children}
-          </div>
+          <div className="flex-1 p-3 md:p-6 overflow-auto bg-mesh">{children}</div>
         </main>
       </div>
     </SidebarProvider>
