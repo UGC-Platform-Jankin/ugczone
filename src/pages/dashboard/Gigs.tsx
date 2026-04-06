@@ -60,6 +60,8 @@ const Gigs = () => {
   const [dataReady, setDataReady] = useState(false);
   const [applicationCounts, setApplicationCounts] = useState<Record<string, number>>({});
   const [acceptedCounts, setAcceptedCounts] = useState<Record<string, number>>({});
+  const [applicationStatuses, setApplicationStatuses] = useState<Record<string, string>>({});
+  const [activeGigDetail, setActiveGigDetail] = useState<any>(null);
 
   // Filters
   const [showFilters, setShowFilters] = useState(false);
