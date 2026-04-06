@@ -54,6 +54,7 @@ const Gigs = () => {
   const [activeMemberships, setActiveMemberships] = useState<any[]>([]);
   const [leavingCampaign, setLeavingCampaign] = useState<any>(null);
   const [leavingLoading, setLeavingLoading] = useState(false);
+  const [leaveReason, setLeaveReason] = useState("");
   const [brandProfiles, setBrandProfiles] = useState<Record<string, any>>({});
   const [activeTab, setActiveTab] = useState<TabFilter>("available");
   const [creatorProfile, setCreatorProfile] = useState<any>(null);
@@ -200,8 +201,12 @@ const Gigs = () => {
   };
 
   const handleLeaveCampaign = async () => {
-    if (!leavingCampaign || !user) return;
+    if (!leavingCampaign || !user || !leaveReason.trim()) {
+      toast({ title: "Please provide a reason for leaving", variant: "destructive" });
+      return;
+    }
     setLeavingLoading(true);
+    const reason = leaveReason.trim();
     await supabase.from("campaign_applications").update({ status: "left" } as any).eq("id", leavingCampaign.id);
     const { data: groupRoom } = await supabase.from("chat_rooms").select("id").eq("campaign_id", leavingCampaign.campaign_id).eq("type", "group").maybeSingle();
     if (groupRoom) {
@@ -219,7 +224,7 @@ const Gigs = () => {
           if (pIds.includes(user.id) && pIds.includes(brandUserId)) {
             await supabase.from("messages").insert({
               chat_room_id: room.id, sender_id: user.id,
-              content: `I've left the campaign "${leavingCampaign._campaign?.title}". Videos delivered: ${leavingCampaign.videos_delivered || 0}. Thanks for the opportunity!`,
+              content: `I've left the campaign "${leavingCampaign._campaign?.title}".\n\nReason: ${reason}\n\nVideos delivered: ${leavingCampaign.videos_delivered || 0}`,
             } as any);
             break;
           }
@@ -228,11 +233,12 @@ const Gigs = () => {
     }
     await supabase.from("notifications").insert({
       user_id: leavingCampaign._campaign?.brand_user_id || "", type: "application_update", title: "Creator Left Campaign",
-      body: `A creator has left "${leavingCampaign._campaign?.title || "your campaign"}". Videos delivered: ${leavingCampaign.videos_delivered || 0}`, link: "/brand/campaigns",
+      body: `A creator has left "${leavingCampaign._campaign?.title || "your campaign"}". Reason: ${reason}. Videos delivered: ${leavingCampaign.videos_delivered || 0}`, link: "/brand/campaigns",
     });
     setActiveMemberships((prev) => prev.filter((m) => m.id !== leavingCampaign.id));
     toast({ title: "You've left the campaign" });
     setLeavingCampaign(null);
+    setLeaveReason("");
     setLeavingLoading(false);
   };
 
@@ -693,42 +699,36 @@ const Gigs = () => {
       </Dialog>
 
       {/* Leave Campaign Confirmation */}
-      <AlertDialog open={!!leavingCampaign} onOpenChange={(open) => !open && setLeavingCampaign(null)}>
-        <AlertDialogContent className="rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-heading font-bold">Leave this campaign?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <span className="block">You are about to leave <strong>"{leavingCampaign?._campaign?.title}"</strong>.</span>
-              <span className="block font-medium text-foreground">Videos delivered so far: {leavingCampaign?.videos_delivered || 0} / {leavingCampaign?._campaign?.expected_video_count || 0}</span>
+      <Dialog open={!!leavingCampaign} onOpenChange={(open) => { if (!open) { setLeavingCampaign(null); setLeaveReason(""); } }}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-heading font-bold">Leave "{leavingCampaign?._campaign?.title}"</DialogTitle>
+            <DialogDescription className="space-y-2">
+              <span className="block font-medium text-foreground">Videos delivered: {leavingCampaign?.videos_delivered || 0} / {leavingCampaign?._campaign?.expected_video_count || 0}</span>
               <span className="block text-sm">You'll be removed from the group chat but can still message the brand privately. This action cannot be undone.</span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-full">Stay</AlertDialogCancel>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="rounded-full">Yes, leave campaign</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="rounded-2xl">
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="font-heading font-bold">Final confirmation</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you absolutely sure you want to leave? You have delivered <strong>{leavingCampaign?.videos_delivered || 0}</strong> video{(leavingCampaign?.videos_delivered || 0) !== 1 ? "s" : ""} so far. This is permanent.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="rounded-full">Go back</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full"
-                    onClick={handleLeaveCampaign} disabled={leavingLoading}>
-                    {leavingLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Leave permanently"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Reason for leaving <span className="text-destructive">*</span></label>
+              <Textarea
+                placeholder="Let the brand know why you're leaving..."
+                value={leaveReason}
+                onChange={(e) => setLeaveReason(e.target.value)}
+                className="min-h-[100px]"
+              />
+              <p className="text-xs text-muted-foreground mt-1">This will be sent to the brand via private chat.</p>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" className="rounded-full" onClick={() => { setLeavingCampaign(null); setLeaveReason(""); }}>Stay</Button>
+              <Button variant="destructive" className="rounded-full" onClick={handleLeaveCampaign} disabled={leavingLoading || !leaveReason.trim()}>
+                {leavingLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                Leave permanently
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Active Gig Detail Dialog */}
       <Dialog open={!!activeGigDetail} onOpenChange={(open) => !open && setActiveGigDetail(null)}>
