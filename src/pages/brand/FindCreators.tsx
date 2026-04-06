@@ -296,8 +296,19 @@ const FindCreators = () => {
               ))}
             </SelectContent>
           </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[180px] h-9 text-sm">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {CONTENT_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" className="h-9 text-xs gap-1" onClick={() => { setSearch(""); setPlatformFilter("all"); setFollowerFilter(0); }}>
+            <Button variant="ghost" size="sm" className="h-9 text-xs gap-1" onClick={() => { setSearch(""); setPlatformFilter("all"); setFollowerFilter(0); setCategoryFilter("all"); }}>
               <X className="h-3 w-3" /> Clear
             </Button>
           )}
