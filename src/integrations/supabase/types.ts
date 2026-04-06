@@ -548,6 +548,7 @@ export type Database = {
           created_at: string
           id: string
           platform: string
+          schedule_event_id: string | null
           submission_id: string
           url: string
         }
@@ -555,6 +556,7 @@ export type Database = {
           created_at?: string
           id?: string
           platform: string
+          schedule_event_id?: string | null
           submission_id: string
           url: string
         }
@@ -562,10 +564,18 @@ export type Database = {
           created_at?: string
           id?: string
           platform?: string
+          schedule_event_id?: string | null
           submission_id?: string
           url?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "posted_video_links_schedule_event_id_fkey"
+            columns: ["schedule_event_id"]
+            isOneToOne: false
+            referencedRelation: "posting_schedule"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "posted_video_links_submission_id_fkey"
             columns: ["submission_id"]
