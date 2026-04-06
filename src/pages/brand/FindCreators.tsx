@@ -20,12 +20,20 @@ const platformIcons: Record<string, any> = { instagram: Instagram, facebook: Fac
 const platformColors: Record<string, string> = { instagram: "text-pink-400", facebook: "text-blue-400", tiktok: "text-cyan-400" };
 const platformOptions = ["instagram", "tiktok", "facebook"];
 const followerRanges = [
-  { label: "Any", min: 0, max: Infinity },
-  { label: "0 – 1K", min: 0, max: 1000 },
-  { label: "1K – 10K", min: 1000, max: 10000 },
-  { label: "10K – 50K", min: 10000, max: 50000 },
-  { label: "50K – 100K", min: 50000, max: 100000 },
-  { label: "100K+", min: 100000, max: Infinity },
+  { label: "Any Followers", min: 0, max: Infinity },
+  { label: "0 – 1K Followers", min: 0, max: 1000 },
+  { label: "1K – 10K Followers", min: 1000, max: 10000 },
+  { label: "10K – 50K Followers", min: 10000, max: 50000 },
+  { label: "50K – 100K Followers", min: 50000, max: 100000 },
+  { label: "100K+ Followers", min: 100000, max: Infinity },
+];
+
+const CONTENT_TYPES = [
+  "Food & Cooking", "Beauty & Skincare", "Fashion & Style", "Tech & Gadgets",
+  "Fitness & Health", "Travel & Lifestyle", "Gaming", "Education & Tutorials",
+  "Home & Decor", "Pets & Animals", "Finance & Business", "Entertainment",
+  "Parenting & Family", "Sports", "Music", "Art & Crafts",
+  "Automotive", "Photography", "Comedy & Humor", "Unboxing & Reviews",
 ];
 
 interface Creator {
