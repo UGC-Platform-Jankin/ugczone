@@ -102,8 +102,8 @@ const BrandPostedVideos = ({ campaignId }: Props) => {
       return ev ? `${new Date(ev.event_date).toLocaleDateString()} — ${ev.description}` : null;
     };
 
-    const acceptedVideos = subs.length;
-    const videosLeft = Math.max(0, expectedVideoCount - acceptedVideos);
+    const totalExpectedLinks = expectedVideoCount * Math.max(1, platforms.length);
+    const linksLeft = Math.max(0, totalExpectedLinks - allLinksList.length);
 
     return (
       <div>
@@ -118,7 +118,7 @@ const BrandPostedVideos = ({ campaignId }: Props) => {
           </Avatar>
           <div>
             <p className="font-semibold text-foreground">{prof.display_name || prof.username || "Creator"}</p>
-            <p className="text-xs text-muted-foreground">{allLinksList.length} link{allLinksList.length !== 1 ? "s" : ""} posted · {videosLeft} video{videosLeft !== 1 ? "s" : ""} left</p>
+            <p className="text-xs text-muted-foreground">{allLinksList.length} link{allLinksList.length !== 1 ? "s" : ""} posted · {linksLeft} link{linksLeft !== 1 ? "s" : ""} left</p>
           </div>
         </div>
 
@@ -190,8 +190,8 @@ const BrandPostedVideos = ({ campaignId }: Props) => {
                 return (Date.now() - d.getTime()) < 3 * 24 * 60 * 60 * 1000;
               }).length;
             }, 0);
-            const acceptedVideos = subs.length;
-            const videosLeft = Math.max(0, expectedVideoCount - acceptedVideos);
+            const totalExpectedLinks = expectedVideoCount * Math.max(1, platforms.length);
+            const linksLeft = Math.max(0, totalExpectedLinks - linkCount);
 
             return (
               <Card
@@ -213,7 +213,7 @@ const BrandPostedVideos = ({ campaignId }: Props) => {
                   </div>
                   <p className="font-medium text-sm text-foreground truncate max-w-full">{prof.display_name || prof.username || "Creator"}</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">{linkCount} link{linkCount !== 1 ? "s" : ""} posted</p>
-                  <p className="text-[10px] text-muted-foreground">{videosLeft} video{videosLeft !== 1 ? "s" : ""} left</p>
+                  <p className="text-[10px] text-muted-foreground">{linksLeft} link{linksLeft !== 1 ? "s" : ""} left</p>
                 </CardContent>
               </Card>
             );
