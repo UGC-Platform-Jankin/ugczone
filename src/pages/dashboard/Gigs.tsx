@@ -89,8 +89,24 @@ const Gigs = () => {
       ]);
       const allCampaignsRaw = (campaignsRes.data as Campaign[]) || [];
 
-      // Fetch brand profiles and filter out campaigns with no existing brand
-      const brandUserIds = [...new Set(allCampaignsRaw.map(c => c.brand_user_id))] as string[];
+      const allApps = (applicationsRes.data as any) || [];
+      setAppliedCampaigns(new Set(allApps.map((a: any) => a.campaign_id)));
+      const statusMap: Record<string, string> = {};
+      allApps.forEach((a: any) => { statusMap[a.campaign_id] = a.status; });
+      setApplicationStatuses(statusMap);
+
+      // Also fetch campaigns the user applied to (may be ended/not in active list)
+      const appliedCampIds = allApps.map((a: any) => a.campaign_id).filter((id: string) => !allCampaignsRaw.some(c => c.id === id));
+      let appliedCampaignsData: Campaign[] = [];
+      if (appliedCampIds.length > 0) {
+        const { data: extraCamps } = await supabase.from("campaigns").select("*").in("id", appliedCampIds);
+        appliedCampaignsData = (extraCamps as Campaign[]) || [];
+      }
+
+      const combinedCampaigns = [...allCampaignsRaw, ...appliedCampaignsData];
+
+      // Fetch brand profiles
+      const brandUserIds = [...new Set(combinedCampaigns.map(c => c.brand_user_id))] as string[];
       let brandMap: Record<string, any> = {};
       if (brandUserIds.length > 0) {
         const { data: brands } = await supabase.from("brand_profiles").select("user_id, business_name, logo_url, website_url, instagram_url, tiktok_url").in("user_id", brandUserIds);
@@ -99,29 +115,22 @@ const Gigs = () => {
       setBrandProfiles(brandMap);
 
       // Only show campaigns where the brand profile still exists
-      const allCampaigns = allCampaignsRaw.filter(c => brandMap[c.brand_user_id]);
+      const allCampaigns = combinedCampaigns.filter(c => brandMap[c.brand_user_id]);
       setCampaigns(allCampaigns);
 
       // Get application counts per campaign
       const campIds = allCampaigns.map(c => c.id);
       if (campIds.length > 0) {
-        const { data: allApps } = await supabase.from("campaign_applications").select("campaign_id, status").in("campaign_id", campIds);
+        const { data: countApps } = await supabase.from("campaign_applications").select("campaign_id, status").in("campaign_id", campIds);
         const appCounts: Record<string, number> = {};
         const accCounts: Record<string, number> = {};
-        (allApps || []).forEach((a: any) => {
+        (countApps || []).forEach((a: any) => {
           appCounts[a.campaign_id] = (appCounts[a.campaign_id] || 0) + 1;
           if (a.status === "accepted") accCounts[a.campaign_id] = (accCounts[a.campaign_id] || 0) + 1;
         });
         setApplicationCounts(appCounts);
         setAcceptedCounts(accCounts);
       }
-
-      const allApps = (applicationsRes.data as any) || [];
-      setAppliedCampaigns(new Set(allApps.map((a: any) => a.campaign_id)));
-      // Track per-campaign application status
-      const statusMap: Record<string, string> = {};
-      allApps.forEach((a: any) => { statusMap[a.campaign_id] = a.status; });
-      setApplicationStatuses(statusMap);
 
       const accepted = allApps.filter((a: any) => a.status === "accepted");
       if (accepted.length > 0) {
@@ -245,8 +254,8 @@ const Gigs = () => {
   };
 
   const tabs: { key: TabFilter; label: string; count: number }[] = [
-    { key: "available", label: "Available", count: campaigns.filter(c => !appliedCampaigns.has(c.id)).length },
-    { key: "applied", label: "Applied", count: [...appliedCampaigns].filter(id => campaigns.some(c => c.id === id)).length },
+    { key: "available", label: "Available", count: campaigns.filter(c => c.status === "active" && !appliedCampaigns.has(c.id)).length },
+    { key: "applied", label: "Applied", count: campaigns.filter(c => appliedCampaigns.has(c.id)).length },
     { key: "active", label: "Active", count: activeMemberships.length },
   ];
 
@@ -264,7 +273,7 @@ const Gigs = () => {
 
   const filteredCampaigns = applyFilters(
     campaigns.filter((c) => {
-      if (activeTab === "available") return !appliedCampaigns.has(c.id);
+      if (activeTab === "available") return c.status === "active" && !appliedCampaigns.has(c.id);
       if (activeTab === "applied") return appliedCampaigns.has(c.id);
       return false;
     })
