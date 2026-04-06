@@ -254,8 +254,8 @@ const Gigs = () => {
   };
 
   const tabs: { key: TabFilter; label: string; count: number }[] = [
-    { key: "available", label: "Available", count: campaigns.filter(c => !appliedCampaigns.has(c.id)).length },
-    { key: "applied", label: "Applied", count: [...appliedCampaigns].filter(id => campaigns.some(c => c.id === id)).length },
+    { key: "available", label: "Available", count: campaigns.filter(c => c.status === "active" && !appliedCampaigns.has(c.id)).length },
+    { key: "applied", label: "Applied", count: campaigns.filter(c => appliedCampaigns.has(c.id)).length },
     { key: "active", label: "Active", count: activeMemberships.length },
   ];
 
