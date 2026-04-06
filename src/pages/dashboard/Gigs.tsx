@@ -381,15 +381,31 @@ const Gigs = () => {
           <div className="space-y-4">
             <ActiveGigHub />
             <div className="space-y-3">
-              {activeMemberships.map(m => (
-                <div key={m.id} className="rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-md">
+              {activeMemberships.map(m => {
+                const brand = brandProfiles[m._campaign.brand_user_id];
+                return (
+                <div key={m.id} className="rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/20 cursor-pointer"
+                  onClick={() => {
+                    // Find the full campaign data to show details
+                    const fullCampaign = campaigns.find(c => c.id === m.campaign_id);
+                    if (fullCampaign) {
+                      setActiveGigDetail({ ...m, _fullCampaign: fullCampaign });
+                    } else {
+                      // If campaign not in active list (could be non-active status), fetch it
+                      setActiveGigDetail(m);
+                    }
+                  }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-gradient-coral flex items-center justify-center shrink-0">
-                        <Video className="h-5 w-5 text-white" />
-                      </div>
+                      <Avatar className="h-12 w-12 rounded-xl ring-2 ring-border shrink-0">
+                        <AvatarImage src={brand?.logo_url || undefined} className="rounded-xl object-cover" />
+                        <AvatarFallback className="rounded-xl bg-secondary text-base font-bold">
+                          {(brand?.business_name || m._campaign.title || "B").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <h3 className="font-heading font-bold text-foreground">{m._campaign.title}</h3>
+                        {brand && <p className="text-xs text-muted-foreground">{brand.business_name}</p>}
                         <div className="flex items-center gap-3 mt-1">
                           <span className="text-xs text-muted-foreground">{m.videos_delivered || 0}/{m._campaign.expected_video_count} videos</span>
                           <Badge className="bg-primary/10 text-primary border-0 text-[11px] font-bold uppercase tracking-wide">Active</Badge>
@@ -397,12 +413,13 @@ const Gigs = () => {
                       </div>
                     </div>
                     <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 rounded-full"
-                      onClick={() => setLeavingCampaign(m)}>
+                      onClick={(e) => { e.stopPropagation(); setLeavingCampaign(m); }}>
                       <LogOut className="h-3.5 w-3.5" /> Leave
                     </Button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )
