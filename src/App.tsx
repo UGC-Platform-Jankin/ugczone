@@ -19,11 +19,13 @@ import ProfileSetup from "./pages/dashboard/ProfileSetup.tsx";
 import Messages from "./components/dashboard/Messages.tsx";
 import VideoSubmissions from "./pages/dashboard/VideoSubmissions.tsx";
 import PostedVideos from "./pages/dashboard/PostedVideos.tsx";
+import CreatorGigDetail from "./pages/dashboard/CreatorGigDetail.tsx";
 import BrandSetup from "./pages/brand/BrandSetup.tsx";
 import BrandOverview from "./pages/brand/BrandOverview.tsx";
 import CreateCampaign from "./pages/brand/CreateCampaign.tsx";
 import BrandProfileContent from "./pages/brand/BrandProfile.tsx";
 import BrandCampaigns from "./pages/brand/BrandCampaigns.tsx";
+import BrandCampaignDetail from "./pages/brand/BrandCampaignDetail.tsx";
 import FindCreators from "./pages/brand/FindCreators.tsx";
 import VideoReview from "./pages/brand/VideoReview.tsx";
 import BrandPostedVideos from "./pages/brand/BrandPostedVideos.tsx";
@@ -59,12 +61,19 @@ const App = () => (
               <Route path="/dashboard/admin" element={<DashboardLayout><AdminPanel /></DashboardLayout>} />
               <Route path="/dashboard/videos" element={<DashboardLayout><VideoSubmissions /></DashboardLayout>} />
               <Route path="/dashboard/posted-videos" element={<DashboardLayout><PostedVideos /></DashboardLayout>} />
+              <Route path="/dashboard/gig/:campaignId" element={<DashboardLayout><CreatorGigDetail /></DashboardLayout>} />
+              <Route path="/dashboard/gig/:campaignId/posted" element={<DashboardLayout><CreatorGigDetail /></DashboardLayout>} />
+              <Route path="/dashboard/gig/:campaignId/schedule" element={<DashboardLayout><CreatorGigDetail /></DashboardLayout>} />
               <Route path="/dashboard/setup" element={<ProfileSetup />} />
               <Route path="/brand/auth" element={<BrandAuth />} />
               <Route path="/brand/setup" element={<BrandSetup />} />
               <Route path="/brand/dashboard" element={<BrandLayout><BrandOverview /></BrandLayout>} />
               <Route path="/brand/campaigns" element={<BrandLayout><BrandCampaigns /></BrandLayout>} />
               <Route path="/brand/campaigns/new" element={<CreateCampaign />} />
+              <Route path="/brand/campaigns/:campaignId" element={<BrandLayout><BrandCampaignDetail /></BrandLayout>} />
+              <Route path="/brand/campaigns/:campaignId/posted" element={<BrandLayout><BrandCampaignDetail /></BrandLayout>} />
+              <Route path="/brand/campaigns/:campaignId/schedule" element={<BrandLayout><BrandCampaignDetail /></BrandLayout>} />
+              <Route path="/brand/campaigns/:campaignId/settings" element={<BrandLayout><BrandCampaignDetail /></BrandLayout>} />
               <Route path="/brand/messages" element={<BrandLayout><Messages /></BrandLayout>} />
               <Route path="/brand/creators" element={<BrandLayout><FindCreators /></BrandLayout>} />
               <Route path="/brand/profile" element={<BrandLayout><BrandProfileContent /></BrandLayout>} />
