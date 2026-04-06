@@ -120,54 +120,7 @@ const CreatorOverview = () => {
         ))}
       </div>
 
-      {/* Active Gigs */}
-      {activeGigs.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-heading font-bold text-foreground">Your Active Gigs</h2>
-            <Link to="/dashboard/gigs" className="text-sm text-primary hover:underline flex items-center gap-1">
-              View all <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-          <div className="grid md:grid-cols-2 gap-3">
-            {activeGigs.slice(0, 4).map((gig) => {
-              const campaign = campaigns.find(c => c.id === gig.campaign_id);
-              const brand = campaign ? brandProfiles[campaign.brand_user_id] : null;
-              return (
-                <Link key={gig.id} to={`/dashboard/gig/${gig.campaign_id}`}>
-                  <Card className="border-border shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer group">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-11 w-11 rounded-xl shrink-0">
-                          <AvatarImage src={brand?.logo_url} className="rounded-xl object-cover" />
-                          <AvatarFallback className="rounded-xl bg-secondary text-sm font-bold">{(brand?.business_name || "B").charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-heading font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
-                            {campaign?.title || "Campaign"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{brand?.business_name || "Brand"}</p>
-                        </div>
-                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30 text-[10px]">
-                          Active
-                        </Badge>
-                      </div>
-                      {campaign && (
-                        <div className="mt-3 flex items-center gap-2 text-[11px] text-muted-foreground">
-                          <Video className="h-3 w-3" />
-                          <span>{campaign.expected_video_count} video{campaign.expected_video_count !== 1 ? "s" : ""} expected</span>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Recommended Gigs */}
+      {/* Recommended Gigs - above active */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
@@ -198,45 +151,44 @@ const CreatorOverview = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {topMatches.map((campaign) => {
               const pct = matches[campaign.id] || 0;
               const brand = brandProfiles[campaign.brand_user_id];
               return (
                 <Link key={campaign.id} to="/dashboard/gigs">
-                  <Card className="border-border shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer group h-full">
-                    <CardContent className="p-4 flex flex-col h-full">
-                      <div className="flex items-start gap-3 mb-3">
-                        <Avatar className="h-10 w-10 rounded-xl shrink-0">
-                          <AvatarImage src={brand?.logo_url} className="rounded-xl object-cover" />
-                          <AvatarFallback className="rounded-xl bg-secondary text-sm font-bold">{(brand?.business_name || "B").charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-heading font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
-                            {campaign.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{brand?.business_name || "Brand"}</p>
-                        </div>
-                      </div>
+                  <Card className="border-border shadow-sm hover:shadow-lg hover:border-primary/20 transition-all cursor-pointer group h-full overflow-hidden">
+                    {/* Brand logo hero */}
+                    <div className="h-32 bg-gradient-to-br from-secondary via-secondary/60 to-muted flex items-center justify-center relative">
+                      <Avatar className="h-20 w-20 rounded-2xl ring-4 ring-card shadow-lg">
+                        <AvatarImage src={brand?.logo_url} className="rounded-2xl object-cover" />
+                        <AvatarFallback className="rounded-2xl bg-card text-2xl font-bold text-foreground">{(brand?.business_name || "B").charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <Badge className={`absolute top-3 right-3 text-[10px] font-bold border ${getMatchColor(pct)}`}>{pct}% match</Badge>
+                    </div>
 
-                      <div className="flex items-center gap-2 flex-wrap mb-3">
+                    <CardContent className="p-5 flex flex-col">
+                      <h3 className="font-heading font-bold text-base text-foreground text-center group-hover:text-primary transition-colors mb-1">
+                        {campaign.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground text-center mb-4">{brand?.business_name || "Brand"}</p>
+
+                      <div className="flex items-center justify-center gap-2 flex-wrap mb-4">
                         {campaign.is_free_product ? (
-                          <Badge variant="secondary" className="text-[10px] gap-1"><Gift className="h-2.5 w-2.5" /> Free Product</Badge>
+                          <Badge variant="secondary" className="text-xs gap-1 px-3 py-1"><Gift className="h-3 w-3" /> Free Product</Badge>
                         ) : campaign.price_per_video ? (
-                          <Badge variant="secondary" className="text-[10px] gap-1"><DollarSign className="h-2.5 w-2.5" /> HK${campaign.price_per_video}/vid</Badge>
+                          <Badge variant="secondary" className="text-xs gap-1 px-3 py-1 text-primary font-semibold"><DollarSign className="h-3 w-3" /> HK${campaign.price_per_video}/vid</Badge>
                         ) : null}
                         {campaign.target_regions?.length > 0 && (
-                          <Badge variant="secondary" className="text-[10px] gap-1"><MapPin className="h-2.5 w-2.5" /> {campaign.target_regions[0]}</Badge>
+                          <Badge variant="secondary" className="text-xs gap-1 px-3 py-1"><MapPin className="h-3 w-3" /> {campaign.target_regions[0]}</Badge>
                         )}
-                        <Badge variant="secondary" className="text-[10px] gap-1"><Video className="h-2.5 w-2.5" /> {campaign.expected_video_count} vid{campaign.expected_video_count !== 1 ? "s" : ""}</Badge>
+                        <Badge variant="secondary" className="text-xs gap-1 px-3 py-1"><Video className="h-3 w-3" /> {campaign.expected_video_count} vid{campaign.expected_video_count !== 1 ? "s" : ""}</Badge>
                       </div>
 
-                      <div className="mt-auto">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[11px] text-muted-foreground">Match</span>
-                          <Badge className={`text-[10px] font-bold border ${getMatchColor(pct)}`}>{pct}%</Badge>
+                      <div className="border-t border-border pt-3 mt-auto">
+                        <div className="text-center text-sm font-semibold text-muted-foreground group-hover:text-primary transition-colors uppercase tracking-wide">
+                          View Gig
                         </div>
-                        <Progress value={pct} className="h-1.5" />
                       </div>
                     </CardContent>
                   </Card>
@@ -246,6 +198,52 @@ const CreatorOverview = () => {
           </div>
         )}
       </div>
+
+      {/* Active Gigs */}
+      {activeGigs.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-heading font-bold text-foreground">Your Active Gigs</h2>
+            <Link to="/dashboard/gigs" className="text-sm text-primary hover:underline flex items-center gap-1">
+              View all <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {activeGigs.slice(0, 6).map((gig) => {
+              const campaign = campaigns.find(c => c.id === gig.campaign_id);
+              const brand = campaign ? brandProfiles[campaign.brand_user_id] : null;
+              return (
+                <Link key={gig.id} to={`/dashboard/gig/${gig.campaign_id}`}>
+                  <Card className="border-border shadow-sm hover:shadow-lg hover:border-primary/20 transition-all cursor-pointer group h-full overflow-hidden">
+                    <div className="h-28 bg-gradient-to-br from-emerald-50 via-secondary/60 to-muted dark:from-emerald-500/10 dark:via-secondary/30 dark:to-muted flex items-center justify-center">
+                      <Avatar className="h-16 w-16 rounded-2xl ring-4 ring-card shadow-lg">
+                        <AvatarImage src={brand?.logo_url} className="rounded-2xl object-cover" />
+                        <AvatarFallback className="rounded-2xl bg-card text-xl font-bold text-foreground">{(brand?.business_name || "B").charAt(0)}</AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <CardContent className="p-5 text-center">
+                      <h3 className="font-heading font-bold text-base text-foreground group-hover:text-primary transition-colors mb-1">
+                        {campaign?.title || "Campaign"}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-3">{brand?.business_name || "Brand"}</p>
+                      <div className="flex items-center justify-center gap-2 flex-wrap mb-3">
+                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30 text-xs px-3 py-1">
+                          Active
+                        </Badge>
+                        {campaign && (
+                          <Badge variant="secondary" className="text-xs gap-1 px-3 py-1">
+                            <Video className="h-3 w-3" /> {campaign.expected_video_count} vid{campaign.expected_video_count !== 1 ? "s" : ""}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
