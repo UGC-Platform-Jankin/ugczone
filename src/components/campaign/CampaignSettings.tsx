@@ -43,8 +43,10 @@ const CampaignSettings = ({ campaignId }: Props) => {
   const [updatingApp, setUpdatingApp] = useState<string | null>(null);
   const [removingCreator, setRemovingCreator] = useState<any>(null);
   const [removingLoading, setRemovingLoading] = useState(false);
+  const [removalMessage, setRemovalMessage] = useState("");
   const [campaignResources, setCampaignResources] = useState<any[]>([]);
   const [contactShares, setContactShares] = useState<any[]>([]);
+  const [videoSubmissions, setVideoSubmissions] = useState<any[]>([]);
 
   // Creator profile dialog
   const [viewingCreator, setViewingCreator] = useState<any>(null);
