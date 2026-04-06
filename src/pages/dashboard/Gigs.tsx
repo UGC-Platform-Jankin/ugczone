@@ -441,8 +441,18 @@ const Gigs = () => {
                             <Sparkles className="h-3 w-3 mr-0.5" />{matchPct}%
                           </Badge>
                         )}
-                        {hasApplied && (
-                          <Badge className="bg-accent/10 text-accent-foreground border-0 text-[11px] font-bold uppercase tracking-wide">Applied</Badge>
+                         {hasApplied && (
+                          <Badge className={`border-0 text-[11px] font-bold uppercase tracking-wide ${
+                            applicationStatuses[campaign.id] === "accepted" 
+                              ? "bg-emerald-500/15 text-emerald-600" 
+                              : applicationStatuses[campaign.id] === "rejected"
+                              ? "bg-destructive/15 text-destructive"
+                              : "bg-accent/10 text-accent-foreground"
+                          }`}>
+                            {applicationStatuses[campaign.id] === "accepted" ? "Accepted" 
+                              : applicationStatuses[campaign.id] === "rejected" ? "Rejected" 
+                              : "Applied"}
+                          </Badge>
                         )}
                       </div>
                     </div>
