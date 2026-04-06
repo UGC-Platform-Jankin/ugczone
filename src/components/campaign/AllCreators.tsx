@@ -430,7 +430,7 @@ const AllCreators = ({ campaignId }: Props) => {
         </DialogContent>
       </Dialog>
 
-      <VideoPlayerDialog video={playingVideo} onClose={() => setPlayingVideo(null)} />
+      <VideoPlayerDialog videoUrl={playingVideo?.url || null} title={playingVideo?.title} onClose={() => setPlayingVideo(null)} />
     </div>
   );
 };
