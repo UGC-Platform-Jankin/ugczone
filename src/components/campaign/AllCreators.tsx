@@ -189,7 +189,8 @@ const AllCreators = ({ campaignId }: Props) => {
       const q = search.toLowerCase();
       const name = (c._profile?.display_name || "").toLowerCase();
       const uname = (c._profile?.username || "").toLowerCase();
-      if (!name.includes(q) && !uname.includes(q)) return false;
+      const email = (c._email || "").toLowerCase();
+      if (!name.includes(q) && !uname.includes(q) && !email.includes(q)) return false;
     }
     return true;
   });
