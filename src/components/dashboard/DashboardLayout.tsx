@@ -118,6 +118,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     { label: "Videos", icon: Video, suffix: "" },
     { label: "Posted", icon: Link2, suffix: "/posted" },
     { label: "Schedule", icon: Calendar, suffix: "/schedule" },
+    { label: "Resources", icon: BookOpen, suffix: "/resources" },
   ];
 
   // Find the current nav icon for header
