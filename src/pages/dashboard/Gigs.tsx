@@ -732,6 +732,137 @@ const Gigs = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Active Gig Detail Dialog */}
+      <Dialog open={!!activeGigDetail} onOpenChange={(open) => !open && setActiveGigDetail(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl p-0">
+          {activeGigDetail && (() => {
+            const campaign = activeGigDetail._fullCampaign || activeGigDetail._campaign;
+            const brand = brandProfiles[campaign?.brand_user_id];
+            return (
+              <div>
+                {/* Brand Header */}
+                <div className="p-6 border-b border-border/50">
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-14 w-14 rounded-xl ring-2 ring-border">
+                      <AvatarImage src={brand?.logo_url || undefined} className="rounded-xl" />
+                      <AvatarFallback className="rounded-xl bg-secondary text-lg font-bold">
+                        {(brand?.business_name || "B").charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h2 className="text-xl font-heading font-bold text-foreground">{campaign.title}</h2>
+                      {brand && (
+                        <p className="text-sm text-primary font-medium mt-0.5">{brand.business_name}</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                        {brand?.website_url && (
+                          <a href={brand.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                            <Globe className="h-3 w-3" /> Website <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        )}
+                        {brand?.instagram_url && (
+                          <a href={brand.instagram_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                            Instagram <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        )}
+                        {brand?.tiktok_url && (
+                          <a href={brand.tiktok_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                            TikTok <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <Badge className="bg-primary/10 text-primary border-0 text-[11px] font-bold uppercase tracking-wide shrink-0">Active</Badge>
+                  </div>
+                </div>
+
+                {/* Progress */}
+                <div className="p-6 border-b border-border/50">
+                  <h3 className="font-heading font-bold text-foreground mb-2">Your Progress</h3>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 h-3 rounded-full bg-secondary overflow-hidden">
+                      <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(100, ((activeGigDetail.videos_delivered || 0) / (campaign.expected_video_count || 1)) * 100)}%` }} />
+                    </div>
+                    <span className="text-sm font-bold text-foreground">{activeGigDetail.videos_delivered || 0}/{campaign.expected_video_count} videos</span>
+                  </div>
+                </div>
+
+                {/* About */}
+                {campaign.description && (
+                  <div className="p-6 border-b border-border/50">
+                    <h3 className="font-heading font-bold text-foreground mb-2">About this campaign</h3>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{campaign.description}</p>
+                  </div>
+                )}
+
+                {/* Budget */}
+                <div className="p-6 border-b border-border/50">
+                  <h3 className="font-heading font-bold text-foreground mb-2">Budget</h3>
+                  {campaign.is_free_product ? (
+                    <div className="flex items-center gap-2">
+                      <Gift className="h-5 w-5 text-primary" />
+                      <span className="text-lg font-bold text-foreground">Free Product</span>
+                    </div>
+                  ) : campaign.price_per_video ? (
+                    <div>
+                      <span className="text-lg font-bold text-foreground">HK${campaign.price_per_video}</span>
+                      <span className="text-sm text-muted-foreground ml-1">per video</span>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Deliverables */}
+                <div className="p-6 border-b border-border/50">
+                  <h3 className="font-heading font-bold text-foreground mb-2">Deliverables</h3>
+                  <p className="text-foreground"><span className="text-lg font-bold">{campaign.expected_video_count}</span> <span className="text-sm text-muted-foreground">video{campaign.expected_video_count > 1 ? "s" : ""}</span></p>
+                  {campaign.campaign_length_days && (
+                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {campaign.campaign_length_days} day campaign</p>
+                  )}
+                  {campaign.platforms && campaign.platforms.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1.5">Platforms</p>
+                      <div className="flex gap-2">
+                        {campaign.platforms.map((p: string) => (
+                          <Badge key={p} variant="secondary" className="capitalize">{p}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Requirements */}
+                {campaign.requirements && (
+                  <div className="p-6 border-b border-border/50">
+                    <h3 className="font-heading font-bold text-foreground mb-2">Requirements</h3>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{campaign.requirements}</p>
+                  </div>
+                )}
+
+                {/* Calendly */}
+                {campaign.calendly_enabled && campaign.calendly_link && (
+                  <div className="p-6 border-b border-border/50">
+                    <h3 className="font-heading font-bold text-foreground mb-2">Schedule a Call</h3>
+                    <a href={campaign.calendly_link} target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" className="gap-2 rounded-full">
+                        <Calendar className="h-4 w-4" /> Book via Calendly <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    </a>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="p-6">
+                  <Button variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 rounded-full"
+                    onClick={() => { setLeavingCampaign(activeGigDetail); setActiveGigDetail(null); }}>
+                    <LogOut className="h-4 w-4" /> Leave Campaign
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
