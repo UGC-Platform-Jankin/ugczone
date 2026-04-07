@@ -38,8 +38,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
-    else if (!loading && user && accountType === "brand") {
-      navigate("/brand/dashboard");
+    else if (!loading && user && accountType !== null) {
+      if (accountType === "brand") {
+        navigate("/brand/dashboard");
+      }
+      // If accountType === null, wait — auth state is still resolving
     }
   }, [user, loading, accountType, navigate]);
 

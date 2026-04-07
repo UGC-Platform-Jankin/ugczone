@@ -22,12 +22,14 @@ const Auth = () => {
   const { user, accountType } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      if (accountType === "creator") {
-        navigate("/dashboard");
-      } else {
-        navigate("/brand/dashboard");
-      }
+    if (!user) { navigate("/auth"); return; }
+    // Guard: wait for accountType to be resolved before redirecting
+    if (accountType === null) return;
+    if (accountType === "creator") {
+      navigate("/dashboard");
+    } else {
+      // Non-creator goes to brand — but only if they have a brand profile
+      navigate("/brand/dashboard");
     }
   }, [user, accountType, navigate]);
 
