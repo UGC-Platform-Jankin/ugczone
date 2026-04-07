@@ -189,6 +189,15 @@ const FindCreators = () => {
     const proposedPrice = invitePrice ? Number(invitePrice) : null;
     const proposedVideos = inviteVideoCount ? Number(inviteVideoCount) : null;
 
+    console.log("[handleInvite] Starting invite:", {
+      userId: user.id,
+      creatorId: inviteCreator.user_id,
+      creatorName: inviteCreator.display_name,
+      campaignId: selectedCampaignId,
+      proposedPrice,
+      proposedVideos,
+    });
+
     const { error } = await supabase.from("campaign_invites").insert({
       campaign_id: selectedCampaignId,
       brand_user_id: user.id,
@@ -199,31 +208,42 @@ const FindCreators = () => {
     } as any);
 
     if (error) {
+      console.error("[handleInvite] Invite insert error:", error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
       setSending(false);
       return;
     }
 
+    console.log("[handleInvite] Invite inserted, creating private chat...");
+
     // Create private DM
-    const { data: privateRoom } = await supabase.from("chat_rooms").insert({
+    const { data: privateRoom, error: roomError } = await supabase.from("chat_rooms").insert({
       type: "private",
       campaign_id: selectedCampaignId,
       name: null,
     } as any).select("id").single();
 
+    if (roomError) {
+      console.error("[handleInvite] Room insert error:", roomError);
+    }
+
+    console.log("[handleInvite] Private room created:", privateRoom);
+
     if (privateRoom) {
-      await supabase.from("chat_participants").insert([
+      const participantInsert = await supabase.from("chat_participants").insert([
         { chat_room_id: privateRoom.id, user_id: user.id },
         { chat_room_id: privateRoom.id, user_id: inviteCreator.user_id },
       ] as any);
+      console.log("[handleInvite] Participants inserted:", participantInsert);
 
       const pricingInfo = proposedPrice ? `\n\n💰 Proposed: HK$${proposedPrice}/video × ${proposedVideos || selectedCampaign?.expected_video_count || 1} video(s)` : "";
       const msgContent = `🎯 **Campaign Invite: ${selectedCampaign?.title || "Campaign"}**${pricingInfo}\n\n${inviteMessage || "You've been invited to apply to this campaign!"}\n\n[CAMPAIGN_INVITE:${selectedCampaignId}]`;
-      await supabase.from("messages").insert({
+      const msgInsert = await supabase.from("messages").insert({
         chat_room_id: privateRoom.id,
         sender_id: user.id,
         content: msgContent,
       } as any);
+      console.log("[handleInvite] Invite message inserted:", msgInsert);
     }
 
     await supabase.from("notifications").insert({
