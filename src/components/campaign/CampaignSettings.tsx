@@ -199,7 +199,10 @@ const CampaignSettings = ({ campaignId }: Props) => {
       }
 
       if (groupRoomId) {
-        await supabase.from("chat_participants").upsert({ chat_room_id: groupRoomId, user_id: app.creator_user_id } as any, { onConflict: "chat_room_id,user_id" });
+        const { data: existingPart } = await supabase.from("chat_participants").select("id").eq("chat_room_id", groupRoomId).eq("user_id", app.creator_user_id).maybeSingle();
+        if (!existingPart) {
+          await supabase.from("chat_participants").insert({ chat_room_id: groupRoomId, user_id: app.creator_user_id } as any);
+        }
         await supabase.from("messages").insert({
           chat_room_id: groupRoomId, sender_id: user.id,
           content: `📥 ${app._profile?.display_name || app._profile?.username || "A creator"} joined the chat`,
