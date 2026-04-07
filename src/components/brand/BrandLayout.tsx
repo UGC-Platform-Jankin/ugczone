@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, LogOut, Users, Megaphone, BarChart3, User, MessageCircle, Sun, Moon, Sparkles, ChevronDown, ChevronRight, Video, Link2, Calendar, Settings } from "lucide-react";
+import { Building2, LogOut, Users, Megaphone, BarChart3, User, MessageCircle, Sun, Moon, Sparkles, ChevronDown, ChevronRight, Video, Link2, Calendar, Settings, DollarSign } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -94,6 +94,7 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
     { label: "Videos", icon: Video, suffix: "" },
     { label: "Posted", icon: Link2, suffix: "/posted" },
     { label: "Schedule", icon: Calendar, suffix: "/schedule" },
+    { label: "Pricing", icon: DollarSign, suffix: "/pricing" },
     { label: "Settings", icon: Settings, suffix: "/settings" },
   ];
 
