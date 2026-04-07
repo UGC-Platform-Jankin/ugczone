@@ -63,26 +63,27 @@ export const useUnreadMessages = () => {
     fetchUnread();
 
     // Listen for new messages to update count
-    const channelName = `unread-counter-${user.id}-${Date.now()}`;
-    const channel = supabase
-      .channel(channelName)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
-        const msg = payload.new as any;
-        if (msg.sender_id !== user.id) {
-          setUnread((prev) => ({
-            total: prev.total + 1,
-            byRoom: { ...prev.byRoom, [msg.chat_room_id]: (prev.byRoom[msg.chat_room_id] || 0) + 1 },
-          }));
-        }
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "message_reads" }, (payload) => {
-        const read = payload.new as any;
-        if (read.user_id === user.id) {
-          // Refetch to get accurate counts
-          fetchUnread();
-        }
-      })
-      .subscribe();
+    const channelName = `unread-counter-${user.id}-${Math.random().toString(36).slice(2)}`;
+    const channel = supabase.channel(channelName);
+    
+    channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+      const msg = payload.new as any;
+      if (msg.sender_id !== user.id) {
+        setUnread((prev) => ({
+          total: prev.total + 1,
+          byRoom: { ...prev.byRoom, [msg.chat_room_id]: (prev.byRoom[msg.chat_room_id] || 0) + 1 },
+        }));
+      }
+    });
+    
+    channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "message_reads" }, (payload) => {
+      const read = payload.new as any;
+      if (read.user_id === user.id) {
+        fetchUnread();
+      }
+    });
+    
+    channel.subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [user]);
