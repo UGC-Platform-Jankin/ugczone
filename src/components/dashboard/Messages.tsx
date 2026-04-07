@@ -265,6 +265,18 @@ const Messages = () => {
     };
     fetchRooms();
 
+    // Subscribe to new chat_rooms rows so our own newly created rooms appear immediately
+    const newRoomChannel = supabase
+      .channel(`new-room-${user.id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "chat_rooms",
+      }, () => {
+        fetchRooms();
+      })
+      .subscribe();
+
     // Subscribe to new chat_participants rows for this user so new rooms appear immediately
     const newParticipantChannel = supabase
       .channel(`new-participant-${user.id}`)
@@ -278,7 +290,10 @@ const Messages = () => {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(newParticipantChannel); };
+    return () => {
+      supabase.removeChannel(newRoomChannel);
+      supabase.removeChannel(newParticipantChannel);
+    };
   }, [isBrandView, user]);
 
   // Fetch messages + participants + read receipts when room selected

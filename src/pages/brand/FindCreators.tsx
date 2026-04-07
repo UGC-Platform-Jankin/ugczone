@@ -234,7 +234,7 @@ const FindCreators = () => {
       link: "/dashboard/messages",
     } as any);
 
-    toast({ title: "Invite sent!", description: `Invited ${inviteCreator.display_name || "creator"} to campaign.` });
+    toast({ title: "Invite sent!", description: `Invited ${inviteCreator.display_name || "creator"} to campaign. Check your messages.` });
     setInviteCreator(null);
     setSelectedCampaignId("");
     setInviteMessage("");
