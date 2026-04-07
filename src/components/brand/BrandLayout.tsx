@@ -51,7 +51,7 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
         setOnboardingChecked(true);
       });
 
-      supabase.from("campaigns").select("id, title, status").eq("brand_user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => {
+      supabase.from("campaigns").select("id, title, status, group_chat_enabled").eq("brand_user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => {
         setCampaigns(data || []);
         const match = location.pathname.match(/\/brand\/campaigns\/([^/]+)/);
         if (match && match[1] !== "new") setExpandedCampaigns(new Set([match[1]]));
@@ -278,7 +278,9 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
                             </SidebarMenuItem>
                             {isExpanded && (
                               <div className="ml-4 space-y-0.5">
-                                {campaignSubItems.map(sub => {
+                                {campaignSubItems
+                                  .filter(sub => sub.label !== "Chat" || (camp as any).group_chat_enabled !== false)
+                                  .map(sub => {
                                   const subPath = `/brand/campaigns/${camp.id}${sub.suffix}`;
                                   const isSubActive = location.pathname === subPath;
                                   return (

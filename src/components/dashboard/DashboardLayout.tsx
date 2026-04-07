@@ -63,7 +63,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     supabase.from("campaign_applications").select("campaign_id").eq("creator_user_id", user.id).eq("status", "accepted").then(async ({ data: apps }) => {
       if (!apps?.length) return;
       const campIds = apps.map((a: any) => a.campaign_id);
-      const { data: camps } = await supabase.from("campaigns").select("id, title, brand_user_id").in("id", campIds);
+      const { data: camps } = await supabase.from("campaigns").select("id, title, brand_user_id, group_chat_enabled").in("id", campIds);
       if (!camps?.length) return;
       const brandIds = [...new Set(camps.map((c: any) => c.brand_user_id))];
       const { data: brands } = await supabase.from("brand_profiles").select("user_id, logo_url, business_name").in("user_id", brandIds);
@@ -249,7 +249,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                             </SidebarMenuItem>
                             {isExpanded && (
                               <div className="ml-4 space-y-0.5">
-                                {gigSubItems.map(sub => {
+                                {gigSubItems
+                                  .filter(sub => sub.label !== "Chat" || gig.group_chat_enabled !== false)
+                                  .map(sub => {
                                   const subPath = `/dashboard/gig/${gig.id}${sub.suffix}`;
                                   const isSubActive = location.pathname === subPath;
                                   return (
