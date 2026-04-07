@@ -617,7 +617,6 @@ const FindCreators = () => {
           )}
         </DialogContent>
       </Dialog>
-    </TabsContent>
 
     <TabsContent value="invites">
       <BrandInvites />
