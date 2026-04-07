@@ -19,13 +19,17 @@ const Auth = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, accountType } = useAuth();
 
   useEffect(() => {
     if (user) {
-      navigate("/dashboard");
+      if (accountType === "creator") {
+        navigate("/dashboard");
+      } else {
+        navigate("/brand/dashboard");
+      }
     }
-  }, [user, navigate]);
+  }, [user, accountType, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +67,7 @@ const Auth = () => {
       email,
       password,
       options: {
-        data: { username, display_name: username },
+        data: { username, display_name: username, account_type: "creator" },
         emailRedirectTo: window.location.origin,
       },
     });

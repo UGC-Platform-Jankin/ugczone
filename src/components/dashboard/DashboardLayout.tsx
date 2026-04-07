@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, accountType, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -38,7 +38,10 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
-  }, [user, loading, navigate]);
+    else if (!loading && user && accountType === "brand") {
+      navigate("/brand/dashboard");
+    }
+  }, [user, loading, accountType, navigate]);
 
   useEffect(() => {
     if (!user) return;

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const BrandLayout = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, accountType, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [brandProfile, setBrandProfile] = useState<any>(null);
@@ -42,7 +42,10 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (!loading && !user) navigate("/brand/auth");
-  }, [user, loading, navigate]);
+    else if (!loading && user && accountType !== "brand") {
+      navigate("/auth");
+    }
+  }, [user, loading, accountType, navigate]);
 
   useEffect(() => {
     if (user) {

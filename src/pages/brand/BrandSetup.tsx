@@ -38,7 +38,7 @@ const countries = [
 ];
 
 const BrandSetup = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, accountType } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +59,8 @@ const BrandSetup = () => {
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/brand/auth");
-  }, [user, authLoading, navigate]);
+    else if (!authLoading && user && accountType !== "brand") navigate("/auth");
+  }, [user, authLoading, accountType, navigate]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

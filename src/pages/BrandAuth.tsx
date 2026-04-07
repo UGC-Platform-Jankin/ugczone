@@ -17,13 +17,17 @@ const BrandAuth = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, accountType } = useAuth();
 
   useEffect(() => {
     if (user) {
-      navigate("/brand/dashboard");
+      if (accountType === "brand") {
+        navigate("/brand/dashboard");
+      } else {
+        navigate("/brand/auth");
+      }
     }
-  }, [user, navigate]);
+  }, [user, accountType, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,9 +42,7 @@ const BrandAuth = () => {
     if (data.user) {
       const { data: bp } = await supabase.from("brand_profiles").select("id").eq("user_id", data.user.id).maybeSingle();
       if (!bp) {
-        await supabase.auth.signOut();
-        toast({ title: "No business account found", description: "This email doesn't have a business account. Sign up first or use the creator login.", variant: "destructive" });
-        setLoading(false);
+        navigate("/brand/setup");
         return;
       }
     }
