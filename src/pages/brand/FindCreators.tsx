@@ -253,7 +253,7 @@ const FindCreators = () => {
       type: "invite",
       title: "Campaign Invite",
       body: `You've been invited to apply to a campaign!`,
-      link: "/dashboard/messages",
+      link: `/dashboard/gig/${selectedCampaignId}/private`,
     } as any);
 
     toast({ title: "Invite sent!", description: `Invited ${inviteCreator.display_name || "creator"} to campaign. Check your messages.` });

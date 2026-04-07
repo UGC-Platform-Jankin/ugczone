@@ -80,7 +80,7 @@ const CampaignChat = ({ campaignId, roomType, isBrandView = false }: Props) => {
   useEffect(() => {
     if (!user || !campaignId) return;
     loadRoom();
-  }, [user, campaignId]);
+  }, [user, campaignId, roomType]);
 
   const loadRoom = async () => {
     setLoading(true);
@@ -90,6 +90,29 @@ const CampaignChat = ({ campaignId, roomType, isBrandView = false }: Props) => {
       .eq("campaign_id", campaignId)
       .eq("type", roomType)
       .maybeSingle();
+
+    // Auto-create room + add user as participant
+    if (!roomData) {
+      if (roomType === "group") {
+        const { data: camp } = await supabase.from("campaigns").select("title, brand_user_id").eq("id", campaignId).maybeSingle();
+        const { data: newRoom } = await supabase.from("chat_rooms").insert({ type: "group", campaign_id: campaignId, name: camp?.title || "Group Chat" } as any).select().single();
+        roomData = newRoom;
+        if (roomData) {
+          await supabase.from("chat_participants").insert({ chat_room_id: roomData.id, user_id: user.id } as any);
+          if (camp?.brand_user_id && user.id !== camp.brand_user_id) {
+            await supabase.from("chat_participants").insert({ chat_room_id: roomData.id, user_id: camp.brand_user_id } as any);
+          }
+          await supabase.from("messages").insert({ chat_room_id: roomData.id, sender_id: user.id, content: `✅ ${user.id === camp?.brand_user_id ? "Brand" : "Creator"} joined the chat!`, pinned: false } as any);
+        }
+      }
+    } else {
+      // Ensure current user is a participant in existing room
+      const { data: existingPart } = await supabase.from("chat_participants").select("id").eq("chat_room_id", roomData.id).eq("user_id", user.id).maybeSingle();
+      if (!existingPart) {
+        await supabase.from("chat_participants").insert({ chat_room_id: roomData.id, user_id: user.id } as any);
+        await supabase.from("messages").insert({ chat_room_id: roomData.id, sender_id: user.id, content: `✅ User joined the chat!` } as any);
+      }
+    }
 
     // For private chats: find or create a per-creator private room
     if (roomType === "private") {
