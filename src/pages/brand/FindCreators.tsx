@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Search, Send, Loader2, Instagram, Facebook, Video, Filter, X, Eye, Globe, Briefcase, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAIMatch } from "@/hooks/useAIMatch";
+import { computeBrandCreatorMatches } from "@/hooks/useSimpleMatch";
 import BrandInvites from "./BrandInvites";
 
 const platformIcons: Record<string, any> = { instagram: Instagram, facebook: Facebook, tiktok: Video };
@@ -131,17 +132,13 @@ const FindCreators = () => {
     past_collabs: (c as any).past_collabs || [],
   }));
 
-  const { matches: creatorMatches, loading: matchLoading } = useAIMatch(
-    "campaign_to_creators",
-    { campaigns: brandCampaignData },
-    matchItems,
-    !loading && creators.length > 0 && brandCampaignData.length > 0
-  );
+  // Use simple formula matching instead of AI (consistent with creator gigs)
+  const simpleCreatorMatches = computeBrandCreatorMatches(brandCampaignData, matchItems);
 
   const getMatchColor = (pct: number) => {
     if (pct >= 80) return "bg-emerald-500/15 text-emerald-600 border-emerald-500/30";
     if (pct >= 60) return "bg-amber-500/15 text-amber-600 border-amber-500/30";
-    if (pct >= 40) return "bg-orange-500/15 text-orange-600 border-orange-500/30";
+    if (pct >= 50) return "bg-orange-500/15 text-orange-600 border-orange-500/30";
     return "bg-muted text-muted-foreground border-border";
   };
 
@@ -179,9 +176,9 @@ const FindCreators = () => {
       });
     }
 
-    result.sort((a, b) => (creatorMatches[b.user_id] || 0) - (creatorMatches[a.user_id] || 0));
+    result.sort((a, b) => (simpleCreatorMatches[b.user_id] || 50) - (simpleCreatorMatches[a.user_id] || 50));
     setFiltered(result);
-  }, [search, creators, platformFilter, followerFilter, categoryFilter, creatorMatches]);
+  }, [search, creators, platformFilter, followerFilter, categoryFilter, simpleCreatorMatches]);
 
   const handleInvite = async () => {
     if (!user || !inviteCreator || !selectedCampaignId) return;
@@ -364,7 +361,7 @@ const FindCreators = () => {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((creator) => {
-            const matchPct = creatorMatches[creator.user_id] || 0;
+            const matchPct = simpleCreatorMatches[creator.user_id] || 50;
             return (
             <Card key={creator.user_id} className="border-border shadow-sm hover:shadow-lg hover:border-primary/20 transition-all cursor-pointer group h-full overflow-hidden"
               onClick={() => handleViewCreator(creator)}>
