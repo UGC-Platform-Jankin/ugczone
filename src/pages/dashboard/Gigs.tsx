@@ -224,6 +224,41 @@ const Gigs = () => {
         body: `A creator applied to "${applyingTo.title}"`, link: "/brand/campaigns",
       });
     }
+
+    // Create or find private chat with brand and send application message
+    const brandUserId = applyingTo.brand_user_id;
+    let privateRoomId: string | null = null;
+    const { data: existingRooms } = await supabase.from("chat_rooms")
+      .select("id, chat_participants(user_id)")
+      .eq("campaign_id", applyingTo.id)
+      .eq("type", "private")
+      .maybeSingle();
+    if (existingRooms) {
+      const participantIds = ((existingRooms as any).chat_participants || []).map((p: any) => p.user_id);
+      if (participantIds.includes(user.id) && participantIds.includes(brandUserId)) {
+        privateRoomId = existingRooms.id;
+      }
+    }
+    if (!privateRoomId) {
+      const { data: newRoom } = await supabase.from("chat_rooms").insert({ type: "private", campaign_id: applyingTo.id, name: null } as any).select("id").single();
+      if (newRoom) {
+        privateRoomId = newRoom.id;
+        await supabase.from("chat_participants").insert([
+          { chat_room_id: newRoom.id, user_id: user.id },
+          { chat_room_id: newRoom.id, user_id: brandUserId },
+        ]);
+      }
+    }
+    if (privateRoomId) {
+      const { data: profile } = await supabase.from("profiles").select("display_name, username").eq("user_id", user.id).maybeSingle();
+      const creatorName = profile?.display_name || profile?.username || "A creator";
+      await supabase.from("messages").insert({
+        chat_room_id: privateRoomId,
+        sender_id: user.id,
+        content: `📩 **Application sent!**\n\nI'd love to collaborate on "${applyingTo.title}"!\n\n[CAMPAIGN_APPLICATION:${applyingTo.id}]`,
+      } as any);
+    }
+
     toast({ title: "Application sent!", description: "The brand will review your application." });
     setApplyingTo(null);
     setCoverLetter("");

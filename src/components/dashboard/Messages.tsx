@@ -548,7 +548,10 @@ const Messages = () => {
   // URL detection and rendering
   const renderContent = (text: string) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = text.split(urlRegex);
+    // Process bold markdown first: **text** -> <strong>text</strong>
+    const boldRegex = /\*\*(.+?)\*\*/g;
+    let processed = text.replace(boldRegex, (_match, content) => `<strong>${content}</strong>`);
+    const parts = processed.split(urlRegex);
     return parts.map((part, i) => {
       if (urlRegex.test(part)) {
         urlRegex.lastIndex = 0;
@@ -557,6 +560,16 @@ const Messages = () => {
             {part}
           </a>
         );
+      }
+      // Check if part contains bold markup (returned as a single element from split)
+      if (part.includes("<strong>")) {
+        const fragment = part;
+        const fragmentParts = fragment.split(/(<strong>.*?<\/strong>)/g);
+        return fragmentParts.map((fp, fi) => {
+          const strongMatch = fp.match(/<strong>(.*?)<\/strong>/);
+          if (strongMatch) return <strong key={fi} className="font-semibold">{strongMatch[1]}</strong>;
+          return <span key={fi}>{fp}</span>;
+        });
       }
       return <span key={i}>{part}</span>;
     });
