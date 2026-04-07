@@ -109,6 +109,7 @@ const AllCreators = ({ campaignId }: Props) => {
     if (!user) return;
     try {
       await findOrCreatePrivateRoom(campaignId, user.id, creatorUserId);
+      toast({ title: "Chat opened" });
     } catch (e) {
       console.error("[AllCreators] handleMessageCreator error:", e);
       toast({ title: "Failed to open chat", description: "Please try again.", variant: "destructive" });
