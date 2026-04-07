@@ -116,11 +116,14 @@ const CampaignChat = ({ campaignId, roomType, isBrandView = false, otherUserId =
     } else {
       // Private chat — find or create with otherUserId
       if (!otherUserId) {
+        console.log("[CampaignChat] no otherUserId, skipping");
         setLoading(false);
         return;
       }
       try {
+        console.log("[CampaignChat] calling findOrCreatePrivateRoom", { campaignId, userId: user.id, otherUserId });
         roomId = await findOrCreatePrivateRoom(campaignId, user.id, otherUserId);
+        console.log("[CampaignChat] roomId:", roomId);
       } catch (e) {
         console.error("[CampaignChat] findOrCreatePrivateRoom failed:", e);
         setLoading(false);

@@ -48,7 +48,10 @@ export async function findOrCreatePrivateRoom(
     .eq("campaign_id", campaignId)
     .eq("type", "private");
 
-  if (roomsError) throw roomsError;
+  if (roomsError) {
+    console.error("[findOrCreatePrivateRoom] step1 roomsError:", roomsError);
+    throw roomsError;
+  }
 
   // 2. Check each room's participants
   for (const room of rooms ?? []) {
@@ -57,7 +60,10 @@ export async function findOrCreatePrivateRoom(
       .select("user_id")
       .eq("chat_room_id", room.id);
 
-    if (partError) continue;
+    if (partError) {
+      console.error("[findOrCreatePrivateRoom] step2 partError for room", room.id, partError);
+      continue;
+    }
     const pIds = (participants ?? []).map((p: any) => p.user_id);
     if (pIds.includes(userId) && pIds.includes(otherUserId)) {
       return room.id; // Room already exists with both participants
@@ -75,7 +81,10 @@ export async function findOrCreatePrivateRoom(
     .select("id")
     .single();
 
-  if (insertError) throw insertError;
+  if (insertError) {
+    console.error("[findOrCreatePrivateRoom] step3 insertError:", insertError);
+    throw insertError;
+  }
   if (!newRoom) throw new Error("Failed to create room");
 
   // 4. Add both participants
@@ -86,7 +95,10 @@ export async function findOrCreatePrivateRoom(
       { chat_room_id: newRoom.id, user_id: otherUserId },
     ] as any);
 
-  if (partInsertError) throw partInsertError;
+  if (partInsertError) {
+    console.error("[findOrCreatePrivateRoom] step4 partInsertError:", partInsertError);
+    throw partInsertError;
+  }
 
   return newRoom.id;
 }
