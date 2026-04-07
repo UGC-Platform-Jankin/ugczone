@@ -7,12 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Loader2, DollarSign, Video, Check, X, AlertCircle, Users, ArrowRightLeft
+  Loader2, DollarSign, Video, Check, X, Users, Pencil
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 interface Props {
   campaignId: string;
@@ -21,43 +19,17 @@ interface Props {
 interface CreatorRow {
   application: any;
   profile: any;
-  editing: {
-    agreed_price_per_video: boolean;
-    agreed_video_count: boolean;
-  };
 }
 
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
-  accepted: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  removed: "bg-destructive/10 text-destructive border-destructive/20",
-  left: "bg-muted text-muted-foreground",
-};
-
-const pricingStatusColors: Record<string, string> = {
-  pending: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
-  countered: "bg-orange-500/10 text-orange-600 border-orange-500/20",
-  agreed: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  pending_brand_edit: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-};
-
-const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
+const CreatorFinances = ({ campaignId }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [campaign, setCampaign] = useState<any>(null);
   const [rows, setRows] = useState<CreatorRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [remainingBudget, setRemainingBudget] = useState<number>(0);
   const [saving, setSaving] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<{ appId: string; field: "price" | "videos" } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
-  const [counteringCreator, setCounteringCreator] = useState<any>(null);
-  const [counterPrice, setCounterPrice] = useState("");
-  const [counterVideos, setCounterVideos] = useState("");
-  const [countering, setCountering] = useState(false);
-  const [rejectingApp, setRejectingApp] = useState<any>(null);
-  const [rejecting, setRejecting] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -66,7 +38,7 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
       supabase.from("campaign_applications")
         .select("*")
         .eq("campaign_id", campaignId)
-        .in("status", ["accepted", "pending", "removed", "left"])
+        .eq("status", "accepted")
         .order("created_at", { ascending: false }),
     ]);
 
@@ -82,20 +54,7 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
     setRows(apps.map((app: any) => ({
       application: app,
       profile: profileMap[app.creator_user_id],
-      editing: { agreed_price_per_video: false, agreed_video_count: false },
     })));
-
-    // Compute remaining budget for prize pool
-    if (campRes.data?.campaign_type === "prize_pool" && campRes.data?.total_budget) {
-      const totalBudget = Number(campRes.data.total_budget);
-      // Sum agreed fees from all accepted applications
-      const totalAgreed = apps
-        .filter((a: any) => a.status === "accepted")
-        .reduce((sum: number, a: any) => {
-          return sum + ((a.agreed_price_per_video || 0) * (a.agreed_video_count || 0));
-        }, 0);
-      setRemainingBudget(totalBudget - totalAgreed);
-    }
 
     setLoading(false);
   };
@@ -107,28 +66,58 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
   const saveEdit = async (appId: string, field: "agreed_price_per_video" | "agreed_video_count", value: string) => {
     setSaving(appId);
     const app = rows.find(r => r.application.id === appId)?.application;
-    const numValue = field === "agreed_price_per_video" ? (value ? Number(value) : null) : (value ? Number(value) : null);
-    const prevApp = app;
+    const numValue = value ? Number(value) : 0;
+    const oldPrice = app.agreed_price_per_video ?? 0;
+    const oldVideos = app.agreed_video_count ?? 0;
+    const oldTotal = oldPrice * oldVideos;
+    const newPrice = field === "agreed_price_per_video" ? numValue : oldPrice;
+    const newVideos = field === "agreed_video_count" ? numValue : oldVideos;
+    const newTotal = newPrice * newVideos;
+
     await supabase.from("campaign_applications").update({
       [field]: numValue,
-      pricing_status: "agreed",
     } as any).eq("id", appId);
+
     // Notify creator via private chat
     if (app) {
-      const { data: room } = await supabase.from("chat_rooms").select("id").eq("campaign_id", campaignId).eq("type", "private").maybeSingle();
-      if (room) {
-        const { data: brandProfile } = await supabase.from("brand_profiles").select("business_name").eq("user_id", user!.id).maybeSingle();
-        const fieldLabel = field === "agreed_price_per_video" ? "price per video" : "number of videos";
-        const newVal = field === "agreed_price_per_video" ? `HK$${numValue}` : `${numValue} video(s)`;
-        await supabase.from("messages").insert({
-          chat_room_id: room.id,
-          sender_id: user!.id,
-          content: `📝 **Agreement Updated by ${brandProfile?.business_name || "the brand"}**\n\nYour ${fieldLabel} has been updated to ${newVal} for "${campaign?.title}".\n\n[CAMPAIGN_AGREED:${campaignId}]`,
-        } as any);
+      const { data: allPrivateRooms } = await supabase.from("chat_rooms").select("id, chat_participants(user_id)").eq("campaign_id", campaignId).eq("type", "private");
+      if (allPrivateRooms?.length) {
+        for (const room of allPrivateRooms) {
+          const pIds = ((room as any).chat_participants || []).map((p: any) => p.user_id);
+          if (pIds.includes(user!.id) && pIds.includes(app.creator_user_id)) {
+            const { data: brandProfile } = await supabase.from("brand_profiles").select("business_name").eq("user_id", user!.id).maybeSingle();
+            const fieldLabel = field === "agreed_price_per_video" ? "price per video" : "number of videos";
+            const newVal = field === "agreed_price_per_video" ? `HK$${numValue}` : `${numValue} video(s)`;
+            const oldVal = field === "agreed_price_per_video" ? `HK$${oldPrice}` : `${oldVideos} video(s)`;
+            await supabase.from("messages").insert({
+              chat_room_id: room.id,
+              sender_id: user!.id,
+              content: `💰 **Finances Updated by ${brandProfile?.business_name || "the brand"}**
+
+Your terms for "${campaign?.title}" have been updated:
+• Price per video: HK$${newPrice} (was HK$${oldPrice})
+• Number of videos: ${newVideos} (was ${oldVideos})
+• New total: HK$${newTotal.toLocaleString()} (was HK$${oldTotal.toLocaleString()})
+
+[CAMPAIGN_AGREED:${campaignId}]`,
+            } as any);
+
+            // Also send a notification
+            await supabase.from("notifications").insert({
+              user_id: app.creator_user_id,
+              type: "finances_updated",
+              title: "Campaign Finances Updated",
+              body: `${brandProfile?.business_name || "The brand"} updated your terms for "${campaign?.title}". Total is now HK$${newTotal.toLocaleString()}.`,
+              link: `/dashboard/gig/${campaignId}/finances`,
+            } as any);
+            break;
+          }
+        }
       }
     }
-    toast({ title: "Updated and notified creator" });
+    toast({ title: "Updated and creator notified" });
     setEditingCell(null);
+    setEditValue("");
     setSaving(null);
     loadData();
   };
@@ -143,136 +132,14 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
     setEditValue("");
   };
 
-  const handleCounterOffer = async () => {
-    if (!counteringCreator) return;
-    setCountering(true);
-    const appId = counteringCreator.application.id;
-    await supabase.from("campaign_applications").update({
-      proposed_price_per_video: counterPrice ? Number(counterPrice) : null,
-      proposed_video_count: counterVideos ? Number(counterVideos) : null,
-      pricing_status: "countered",
-    } as any).eq("id", appId);
-    // Send message to creator's private chat
-    const { data: room } = await supabase.from("chat_rooms").select("id").eq("campaign_id", campaignId).eq("type", "private").maybeSingle();
-    if (room) {
-      const { data: brandProfile } = await supabase.from("brand_profiles").select("business_name").eq("user_id", user!.id).maybeSingle();
-      await supabase.from("messages").insert({
-        chat_room_id: room.id,
-        sender_id: user!.id,
-        content: `💬 **Counter Offer from ${brandProfile?.business_name || "the brand"}**\n\nWe've proposed HK$${counterPrice || "—"}/video × ${counterVideos || "—"} video(s) for "${campaign?.title}".\n\n[CAMPAIGN_COUNTER:${campaignId}]`,
-      } as any);
-    }
-    toast({ title: "Counter offer sent to creator!" });
-    setCounteringCreator(null);
-    setCounterPrice("");
-    setCounterVideos("");
-    setCountering(false);
-    loadData();
-  };
-
-  const acceptCounterOffer = async (appId: string, proposedPrice: number, proposedVideos: number) => {
-    setSaving(appId);
-    const app = rows.find(r => r.application.id === appId)?.application;
-    await supabase.from("campaign_applications").update({
-      agreed_price_per_video: proposedPrice,
-      agreed_video_count: proposedVideos,
-      pricing_status: "agreed",
-      status: "accepted",
-    } as any).eq("id", appId);
-    // Update corresponding invite to accepted if exists
-    if (app) {
-      await supabase.from("campaign_invites").update({ status: "accepted" }).eq("campaign_id", campaignId).eq("creator_user_id", app.creator_user_id);
-    }
-    // Send message to creator's private chat
-    if (app) {
-      const { data: room } = await supabase.from("chat_rooms").select("id").eq("campaign_id", campaignId).eq("type", "private").maybeSingle();
-      if (room) {
-        const { data: brandProfile } = await supabase.from("brand_profiles").select("business_name").eq("user_id", user!.id).maybeSingle();
-        await supabase.from("messages").insert({
-          chat_room_id: room.id,
-          sender_id: user!.id,
-          content: `✅ Your counter offer has been accepted by ${brandProfile?.business_name || "the brand"}!\n\nAgreed terms: HK$${proposedPrice}/video × ${proposedVideos} video(s)\n\n[CAMPAIGN_AGREED:${campaignId}]`,
-        } as any);
-      }
-      // Add creator to group chat - create if not exists
-      let { data: groupRoom } = await supabase.from("chat_rooms").select("id").eq("campaign_id", campaignId).eq("type", "group").maybeSingle();
-      if (!groupRoom) {
-        const { data: camp } = await supabase.from("campaigns").select("title").eq("id", campaignId).maybeSingle();
-        const { data: newRoom } = await supabase.from("chat_rooms").insert({ type: "group", campaign_id: campaignId, name: camp?.title || "Group Chat" } as any).select("id").single();
-        groupRoom = newRoom;
-      }
-      if (groupRoom) {
-        const { data: existingPart } = await supabase.from("chat_participants").select("id").eq("chat_room_id", groupRoom.id).eq("user_id", app.creator_user_id).maybeSingle();
-        if (!existingPart) {
-          await supabase.from("chat_participants").insert({ chat_room_id: groupRoom.id, user_id: app.creator_user_id });
-          const { data: brandProfile } = await supabase.from("brand_profiles").select("business_name").eq("user_id", user!.id).maybeSingle();
-          await supabase.from("messages").insert({
-            chat_room_id: groupRoom.id,
-            sender_id: user!.id,
-            content: `${brandProfile?.business_name || "The brand"} accepted the counter offer — ${app.profile?.display_name || "Creator"} joined!`,
-          } as any);
-        }
-      }
-
-      // Create private chat if needed
-      let privateRoomId: string | null = null;
-      const { data: allPrivateRooms } = await supabase.from("chat_rooms").select("id, chat_participants(user_id)").eq("campaign_id", campaignId).eq("type", "private");
-      if (allPrivateRooms && allPrivateRooms.length > 0) {
-        for (const room of allPrivateRooms) {
-          const pIds = ((room as any).chat_participants || []).map((p: any) => p.user_id);
-          if (pIds.includes(app.creator_user_id)) { privateRoomId = room.id; break; }
-        }
-      }
-      if (!privateRoomId && groupRoom) {
-        const { data: newRoom } = await supabase.from("chat_rooms").insert({ type: "private", campaign_id: campaignId, name: null } as any).select("id").single();
-        if (newRoom) {
-          await supabase.from("chat_participants").insert([
-            { chat_room_id: newRoom.id, user_id: app.creator_user_id },
-            { chat_room_id: newRoom.id, user_id: user!.id },
-          ]);
-        }
-      }
-    }
-    toast({ title: "Counter offer accepted" });
-    setSaving(null);
-    loadData();
-  };
-
-  const rejectCounterOffer = async (appId: string) => {
-    if (!rejectingApp) return;
-    setRejecting(true);
-    const app = rows.find(r => r.application.id === appId)?.application;
-    await supabase.from("campaign_applications").update({ status: "declined" } as any).eq("id", appId);
-    // Notify creator
-    if (app) {
-      const { data: room } = await supabase.from("chat_rooms").select("id").eq("campaign_id", campaignId).eq("type", "private").maybeSingle();
-      if (room) {
-        const { data: brandProfile } = await supabase.from("brand_profiles").select("business_name").eq("user_id", user!.id).maybeSingle();
-        await supabase.from("messages").insert({
-          chat_room_id: room.id,
-          sender_id: user!.id,
-          content: `❌ ${brandProfile?.business_name || "The brand"} declined your counter offer for "${campaign?.title}".`,
-        } as any);
-      }
-    }
-    toast({ title: "Counter offer declined" });
-    setRejectingApp(null);
-    setRejecting(false);
-    loadData();
-  };
-
   const totalFee = (app: any) => {
     const price = app.agreed_price_per_video ?? 0;
     const videos = app.agreed_video_count ?? 0;
     return price * videos;
   };
 
-  const grandTotal = rows.reduce((sum, r) => sum + (r.application.status === "accepted" ? totalFee(r.application) : 0), 0);
-
-  const pricingMode = campaign?.pricing_mode;
-  const videosMode = campaign?.videos_mode;
-  const isFixedPrice = pricingMode === "fixed";
-  const isFixedVideos = videosMode === "fixed";
+  const grandTotal = rows.reduce((sum, r) => sum + totalFee(r.application), 0);
+  const totalVideos = rows.reduce((sum, r) => sum + (r.application.agreed_video_count ?? 0), 0);
 
   if (loading) {
     return <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
@@ -281,7 +148,7 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
   return (
     <div className="space-y-4">
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <Card className="border-border/50">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
@@ -289,60 +156,44 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Active Creators</p>
-              <p className="text-xl font-bold">{rows.filter(r => r.application.status === "accepted").length}</p>
+              <p className="text-xl font-bold">{rows.length}</p>
             </div>
           </CardContent>
         </Card>
-        {campaign?.campaign_type === "prize_pool" ? (
-          <>
-            <Card className="border-border/50">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <DollarSign className="h-5 w-5 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Spent</p>
-                  <p className="text-xl font-bold">HK${grandTotal.toLocaleString()}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-border/50">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                  <AlertCircle className="h-5 w-5 text-amber-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Remaining Budget</p>
-                  <p className="text-xl font-bold">HK${Math.max(0, remainingBudget).toLocaleString()}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        ) : (
-          <>
-            <Card className="border-border/50">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <DollarSign className="h-5 w-5 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Agreed Fees</p>
-                  <p className="text-xl font-bold">HK${grandTotal.toLocaleString()}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-border/50">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                  <AlertCircle className="h-5 w-5 text-yellow-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Pending Pricing</p>
-                  <p className="text-xl font-bold">{rows.filter(r => r.application.status === "accepted" && r.application.pricing_status === "pending").length}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </>
+        <Card className="border-border/50">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <Video className="h-5 w-5 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Total Videos</p>
+              <p className="text-xl font-bold">{totalVideos}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+              <DollarSign className="h-5 w-5 text-purple-500" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Total Payout</p>
+              <p className="text-xl font-bold">HK${grandTotal.toLocaleString()}</p>
+            </div>
+          </CardContent>
+        </Card>
+        {campaign?.campaign_type === "prize_pool" && campaign?.total_budget && (
+          <Card className="border-border/50">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Prize Pool Budget</p>
+                <p className="text-xl font-bold">HK${Number(campaign.total_budget).toLocaleString()}</p>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
@@ -354,8 +205,7 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
         </div>
       ) : (
         <div className="flex gap-3 text-xs text-muted-foreground">
-          <span className="px-2 py-1 rounded bg-secondary">Price: {isFixedPrice ? "Fixed" : "Flexible (per-creator)"}</span>
-          <span className="px-2 py-1 rounded bg-secondary">Videos: {isFixedVideos ? "Fixed" : "Flexible (per-creator)"}</span>
+          <span className="px-2 py-1 rounded bg-secondary">Campaign Budget: HK${campaign?.budget ? Number(campaign.budget).toLocaleString() : "—"}</span>
         </div>
       )}
 
@@ -366,34 +216,23 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
             <thead>
               <tr className="border-b bg-secondary/50">
                 <th className="text-left p-3 font-medium text-muted-foreground">Creator</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Pricing Status</th>
-                <th className="text-center p-3 font-medium text-muted-foreground">Proposed Price</th>
-                <th className="text-center p-3 font-medium text-muted-foreground">Proposed Videos</th>
-                <th className="text-center p-3 font-medium text-muted-foreground">
-                  Agreed Price {isFixedPrice && <span className="text-xs text-muted-foreground ml-1">(locked)</span>}
-                </th>
-                <th className="text-center p-3 font-medium text-muted-foreground">
-                  Agreed Videos {isFixedVideos && <span className="text-xs text-muted-foreground ml-1">(locked)</span>}
-                </th>
+                <th className="text-center p-3 font-medium text-muted-foreground">Price / Video</th>
+                <th className="text-center p-3 font-medium text-muted-foreground"># Videos</th>
                 <th className="text-right p-3 font-medium text-muted-foreground">Total Fee</th>
-                <th className="text-center p-3 font-medium text-muted-foreground">Actions</th>
+                <th className="text-center p-3 font-medium text-muted-foreground">Edit</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-muted-foreground">No creators in this campaign yet</td>
+                  <td colSpan={5} className="text-center py-12 text-muted-foreground">No accepted creators in this campaign yet</td>
                 </tr>
               ) : rows.map(({ application: app, profile }) => {
                 const isEditing = editingCell?.appId === app.id;
                 const isSavingThis = saving === app.id;
-                const hasCountered = app.pricing_status === "countered";
-                const isPending = app.status === "pending" && app.pricing_status === "countered";
-                const isEditable = app.status === "accepted";
 
                 return (
-                  <tr key={app.id} className={`border-b border-border/30 ${hasCountered ? "bg-orange-500/5" : isPending ? "bg-yellow-500/5" : ""}`}>
+                  <tr key={app.id} className="border-b border-border/30">
                     {/* Creator */}
                     <td className="p-3">
                       <div className="flex items-center gap-2">
@@ -407,29 +246,11 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
                         </div>
                       </div>
                     </td>
-                    {/* Status */}
-                    <td className="p-3">
-                      <Badge className={statusColors[app.status] || "bg-muted"}>{app.status}</Badge>
-                    </td>
-                    {/* Pricing Status */}
-                    <td className="p-3">
-                      <Badge className={pricingStatusColors[app.pricing_status] || "bg-muted"}>{app.pricing_status || "pending"}</Badge>
-                      {hasCountered && (
-                        <p className="text-xs text-orange-600 mt-1">HK${app.proposed_price_per_video}/video × {app.proposed_video_count}</p>
-                      )}
-                    </td>
-                    {/* Proposed Price */}
-                    <td className="p-3 text-center text-muted-foreground">
-                      {app.proposed_price_per_video != null ? `HK$${app.proposed_price_per_video}` : "—"}
-                    </td>
-                    {/* Proposed Videos */}
-                    <td className="p-3 text-center text-muted-foreground">
-                      {app.proposed_video_count ?? "—"}
-                    </td>
-                    {/* Agreed Price */}
+                    {/* Price per Video */}
                     <td className="p-3 text-center">
                       {isEditing && editingCell.field === "price" ? (
                         <div className="flex items-center gap-1 justify-center">
+                          <span className="text-muted-foreground text-sm">HK$</span>
                           <Input
                             type="number"
                             className="w-20 h-7 text-center text-sm"
@@ -445,16 +266,16 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
                           </Button>
                         </div>
                       ) : (
-                        <button
-                          className={`text-sm ${isEditable && !isFixedPrice ? "cursor-pointer hover:text-primary" : "cursor-default text-muted-foreground"}`}
-                          onClick={() => !isFixedPrice && isEditable && startEdit(app.id, "price", app.agreed_price_per_video)}
-                          disabled={isFixedPrice || !isEditable}
-                        >
-                          {app.agreed_price_per_video != null ? `HK$${app.agreed_price_per_video}` : "—"}
-                        </button>
+                        <div className="flex items-center gap-1 justify-center">
+                          <span className="text-sm text-muted-foreground">HK$</span>
+                          <span className="text-sm font-medium">{app.agreed_price_per_video ?? "—"}</span>
+                          {campaign?.is_free_product ? (
+                            <Badge variant="secondary" className="text-[10px] ml-1">Free</Badge>
+                          ) : null}
+                        </div>
                       )}
                     </td>
-                    {/* Agreed Videos */}
+                    {/* Videos */}
                     <td className="p-3 text-center">
                       {isEditing && editingCell.field === "videos" ? (
                         <div className="flex items-center gap-1 justify-center">
@@ -473,74 +294,28 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
                           </Button>
                         </div>
                       ) : (
-                        <button
-                          className={`text-sm ${isEditable && !isFixedVideos ? "cursor-pointer hover:text-primary" : "cursor-default text-muted-foreground"}`}
-                          onClick={() => !isFixedVideos && isEditable && startEdit(app.id, "videos", app.agreed_video_count)}
-                          disabled={isFixedVideos || !isEditable}
-                        >
-                          {app.agreed_video_count ?? "—"}
-                        </button>
+                        <span className="text-sm font-medium">{app.agreed_video_count ?? "—"}</span>
                       )}
                     </td>
                     {/* Total Fee */}
                     <td className="p-3 text-right font-medium text-foreground">
-                      {app.status === "accepted" ? `HK$${totalFee(app).toLocaleString()}` : "—"}
+                      {campaign?.is_free_product ? (
+                        <Badge variant="secondary">Free Product</Badge>
+                      ) : (
+                        `HK$${totalFee(app).toLocaleString()}`
+                      )}
                     </td>
-                    {/* Actions */}
+                    {/* Edit */}
                     <td className="p-3 text-center">
-                      {isPending ? (
+                      {campaign?.is_free_product ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : (
                         <div className="flex items-center gap-1 justify-center">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-xs gap-1"
-                            onClick={() => acceptCounterOffer(app.id, app.proposed_price_per_video, app.proposed_video_count)}
-                            disabled={isSavingThis}
-                          >
-                            <Check className="h-3 w-3" /> Accept
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-xs gap-1"
-                            onClick={() => {
-                              setCounteringCreator({ application: app, profile });
-                              setCounterPrice(app.proposed_price_per_video?.toString() || "");
-                              setCounterVideos(app.proposed_video_count?.toString() || "1");
-                            }}
-                          >
-                            <ArrowRightLeft className="h-3 w-3" /> Counter
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2 text-destructive hover:text-destructive"
-                            onClick={() => setRejectingApp({ application: app, profile })}
-                          >
-                            <X className="h-3 w-3" />
+                          <Button size="sm" variant="ghost" className="h-7 w-7 px-0" onClick={() => startEdit(app.id, "price", app.agreed_price_per_video)}>
+                            <Pencil className="h-3 w-3" />
                           </Button>
                         </div>
-                      ) : hasCountered && isEditable ? (
-                        <div className="flex items-center gap-1 justify-center">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-xs gap-1"
-                            onClick={() => acceptCounterOffer(app.id, app.proposed_price_per_video, app.proposed_video_count)}
-                            disabled={isSavingThis}
-                          >
-                            <Check className="h-3 w-3" /> Accept
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2"
-                            onClick={() => startEdit(app.id, "price", app.agreed_price_per_video)}
-                          >
-                            <ArrowRightLeft className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ) : null}
+                      )}
                     </td>
                   </tr>
                 );
@@ -548,8 +323,15 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
               {/* Grand Total Row */}
               {rows.length > 0 && (
                 <tr className="border-t-2 border-border bg-secondary/50 font-bold">
-                  <td colSpan={7} className="p-3 text-right">Grand Total</td>
-                  <td className="p-3 text-right">HK${grandTotal.toLocaleString()}</td>
+                  <td colSpan={2} className="p-3 text-right">Grand Total</td>
+                  <td className="p-3 text-center">{totalVideos}</td>
+                  <td className="p-3 text-right">
+                    {campaign?.is_free_product ? (
+                      <Badge variant="secondary">Free Product</Badge>
+                    ) : (
+                      <>HK${grandTotal.toLocaleString()}</>
+                    )}
+                  </td>
                   <td />
                 </tr>
               )}
@@ -557,79 +339,8 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
           </table>
         </div>
       </Card>
-
-      {/* Counter Offer Dialog (brand-side — for counter offers sent to them) */}
-      <Dialog open={!!counteringCreator} onOpenChange={(open) => { if (!open) setCounteringCreator(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Counter Offer from {counteringCreator?.profile?.display_name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
-              This creator has proposed different terms. You can accept their counter offer or propose your own.
-            </p>
-            <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 space-y-1">
-              <p className="text-sm font-medium">Creator's Counter Offer:</p>
-              <p className="text-sm">HK${counteringCreator?.application?.proposed_price_per_video}/video × {counteringCreator?.application?.proposed_video_count} video(s)</p>
-              <p className="text-sm font-medium">Total: HK${((counteringCreator?.application?.proposed_price_per_video || 0) * (counteringCreator?.application?.proposed_video_count || 0)).toLocaleString()}</p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <Label>Your Agreed Price per Video (HKD)</Label>
-                <Input type="number" value={counterPrice} onChange={(e) => setCounterPrice(e.target.value)} placeholder="e.g. 600" />
-              </div>
-              <div>
-                <Label>Your Agreed Number of Videos</Label>
-                <Input type="number" value={counterVideos} onChange={(e) => setCounterVideos(e.target.value)} placeholder="e.g. 2" />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleCounterOffer}
-                disabled={countering}
-                className="flex-1"
-              >
-                {countering ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Counter Offer"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => acceptCounterOffer(counteringCreator?.id, counteringCreator?.application?.proposed_price_per_video, counteringCreator?.application?.proposed_video_count)}
-                disabled={countering}
-                className="flex-1"
-              >
-                Accept Counter
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reject Counter Offer Dialog */}
-      <Dialog open={!!rejectingApp} onOpenChange={(open) => { if (!open) setRejectingApp(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Decline Counter Offer?</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to decline <strong>{rejectingApp?.profile?.display_name}</strong>'s counter offer for "{campaign?.title}"? They will be notified via chat.
-            </p>
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setRejectingApp(null)}>Cancel</Button>
-              <Button
-                variant="destructive"
-                className="flex-1"
-                disabled={rejecting}
-                onClick={() => rejectCounterOffer(rejectingApp?.application?.id)}
-              >
-                {rejecting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Decline Offer"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
 
-export default CreatorPricingSpreadsheet;
+export default CreatorFinances;

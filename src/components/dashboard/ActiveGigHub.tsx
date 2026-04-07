@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,7 @@ interface ActiveGig {
 const ActiveGigHub = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [gigs, setGigs] = useState<ActiveGig[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedGig, setSelectedGig] = useState<ActiveGig | null>(null);
@@ -255,6 +257,21 @@ const ActiveGigHub = () => {
                   </a>
                 </div>
               )}
+
+              {/* Message Brand Button */}
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => {
+                    const brandUserId = selectedGig.campaign.brand_user_id;
+                    if (!brandUserId) return;
+                    navigate(`/dashboard/gig/${selectedGig.campaign.id}/private?brand=${brandUserId}`);
+                  }}
+                >
+                  <MessageSquare className="h-4 w-4" /> Message Brand
+                </Button>
+              </div>
 
               {/* Calendly */}
               {selectedGig.campaign.calendly_enabled && selectedGig.campaign.calendly_link && (

@@ -9,7 +9,7 @@ import BrandPostedForCampaign from "@/components/campaign/BrandPostedVideos";
 import PostingSchedule from "@/components/campaign/PostingSchedule";
 import CampaignSettings from "@/components/campaign/CampaignSettings";
 import AllCreators from "@/components/campaign/AllCreators";
-import CreatorPricingSpreadsheet from "@/components/campaign/CreatorPricingSpreadsheet";
+import CreatorFinances from "@/components/campaign/CreatorPricingSpreadsheet";
 import BrandVideos from "@/components/campaign/BrandVideos";
 import CampaignChat from "@/components/campaign/CampaignChat";
 import CampaignApplications from "@/components/campaign/CampaignApplications";
@@ -72,7 +72,7 @@ const BrandCampaignDetail = () => {
           )}
           <TabsTrigger value="creators" className="gap-1.5"><Users className="h-3.5 w-3.5" /> All Creators</TabsTrigger>
           <TabsTrigger value="applications" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Applications</TabsTrigger>
-          <TabsTrigger value="pricing" className="gap-1.5"><DollarSign className="h-3.5 w-3.5" /> Pricing</TabsTrigger>
+          <TabsTrigger value="pricing" className="gap-1.5"><DollarSign className="h-3.5 w-3.5" /> Finances</TabsTrigger>
           <TabsTrigger value="messages" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" /> Chat</TabsTrigger>
           <TabsTrigger value="private" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" /> Private</TabsTrigger>
           <TabsTrigger value="settings" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> Settings</TabsTrigger>
@@ -100,7 +100,7 @@ const BrandCampaignDetail = () => {
           <CampaignApplications campaignId={campaignId!} />
         </TabsContent>
         <TabsContent value="pricing">
-          <CreatorPricingSpreadsheet campaignId={campaignId!} />
+          <CreatorFinances campaignId={campaignId!} />
         </TabsContent>
         <TabsContent value="messages">
           <div className="h-[580px]">

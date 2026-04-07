@@ -28,13 +28,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [accountType, setAccountType] = useState<"creator" | "brand" | null>(null);
   const navigate = useNavigate();
 
+  // Helper to determine account type from user metadata or profiles table
+  const resolveAccountType = async (user: User): Promise<"creator" | "brand" | null> => {
+    // First check user metadata
+    const metaType = user.user_metadata?.account_type;
+    if (metaType === "creator" || metaType === "brand") {
+      return metaType;
+    }
+    // Fallback: check if user exists in brand_profiles
+    const { data: brandProfile } = await supabase
+      .from("brand_profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (brandProfile) return "brand";
+    return "creator";
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          const type = session.user.user_metadata?.account_type ?? null;
+          const type = await resolveAccountType(session.user);
           setAccountType(type);
           console.log("[Auth] onAuthStateChange — accountType:", type, "user:", session.user.email);
         } else {
@@ -48,7 +65,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        const type = session.user.user_metadata?.account_type ?? null;
+        const type = await resolveAccountType(session.user);
         setAccountType(type);
         console.log("[Auth] getSession — accountType:", type, "user:", session.user.email);
       } else {

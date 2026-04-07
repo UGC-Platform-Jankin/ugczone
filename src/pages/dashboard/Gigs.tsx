@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Briefcase, Clock, DollarSign, MapPin, Send, Loader2, Check, LogOut, Gift, Video, MoreHorizontal, Sparkles, Filter, X, ChevronDown, Globe, Tag, Users, ExternalLink, Calendar } from "lucide-react";
+import { Briefcase, Clock, DollarSign, MapPin, Send, Loader2, Check, LogOut, Gift, Video, MoreHorizontal, Sparkles, Filter, X, ChevronDown, Globe, Tag, Users, ExternalLink, Calendar, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { computeCreatorCampaignMatches } from "@/hooks/useSimpleMatch";
@@ -67,10 +67,6 @@ const Gigs = () => {
   const [applicationStatuses, setApplicationStatuses] = useState<Record<string, string>>({});
   const [activeGigDetail, setActiveGigDetail] = useState<any>(null);
   const [invites, setInvites] = useState<any[]>([]);
-  const [counteringInvite, setCounteringInvite] = useState<any>(null);
-  const [counterPrice, setCounterPrice] = useState("");
-  const [counterVideos, setCounterVideos] = useState("");
-  const [countering, setCountering] = useState(false);
   const [rejectingInvite, setRejectingInvite] = useState<any>(null);
   const [rejecting, setRejecting] = useState(false);
 
@@ -223,7 +219,12 @@ const Gigs = () => {
     }
     setSubmitting(true);
     const { error } = await supabase.from("campaign_applications").insert({
-      campaign_id: applyingTo.id, creator_user_id: user.id, cover_letter: coverLetter,
+      campaign_id: applyingTo.id,
+      creator_user_id: user.id,
+      cover_letter: coverLetter,
+      agreed_price_per_video: applyingTo.is_free_product ? null : applyingTo.price_per_video,
+      agreed_video_count: applyingTo.expected_video_count,
+      pricing_status: "agreed",
     } as any);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -387,54 +388,6 @@ const Gigs = () => {
     navigate(`/dashboard/gig/${invite.campaign_id}/private`);
   };
 
-  const handleCounterOfferInvite = async () => {
-    if (!counteringInvite || !user || !counterPrice || !counterVideos) return;
-    setCountering(true);
-    const brandUserId = counteringInvite.brand_user_id;
-    const campaignId = counteringInvite.campaign_id;
-    // Insert as pending — brand must accept/reject/counter before creator is fully in campaign
-    await supabase.from("campaign_applications").insert({
-      campaign_id: campaignId,
-      creator_user_id: user.id,
-      cover_letter: "Counter offer submitted",
-      status: "pending",
-      agreed_price_per_video: null,
-      agreed_video_count: Number(counterVideos),
-      pricing_status: "countered",
-      proposed_price_per_video: Number(counterPrice),
-      proposed_video_count: Number(counterVideos),
-    } as any);
-    // Keep invite as pending until brand accepts the counter
-    await supabase.from("campaign_invites").update({ status: "pending" }).eq("id", counteringInvite.id);
-    const { data: prof } = await supabase.from("profiles").select("display_name").eq("user_id", user.id).maybeSingle();
-    await supabase.from("notifications").insert({
-      user_id: brandUserId,
-      type: "counter_offer",
-      title: "Counter Offer Received",
-      body: `${prof?.display_name || "A creator"} sent a counter offer for "${counteringInvite._campaign?.title}"`,
-      link: `/brand/campaigns/${campaignId}/pricing`,
-    });
-
-    // Send message to brand's private chat
-    const { data: profile } = await supabase.from("profiles").select("display_name").eq("user_id", user.id).maybeSingle();
-    const creatorName = profile?.display_name || "A creator";
-    const { data: privateRoom } = await supabase.from("chat_rooms").select("id").eq("campaign_id", campaignId).eq("type", "private").maybeSingle();
-    if (privateRoom) {
-      await supabase.from("messages").insert({
-        chat_room_id: privateRoom.id,
-        sender_id: user.id,
-        content: `💬 **Counter Offer Sent**\n\nI'd like to propose HK$${counterPrice}/video × ${counterVideos} video(s) for "${counteringInvite._campaign?.title}".\n\n[CAMPAIGN_COUNTER:${campaignId}]`,
-      } as any);
-    }
-
-    setInvites(prev => prev.filter(i => i.id !== counteringInvite.id));
-    toast({ title: "Counter offer sent! Brand will review your terms." });
-    setCounteringInvite(null);
-    setCounterPrice("");
-    setCounterVideos("");
-    setCountering(false);
-  };
-
   const handleRejectInvite = async (invite: any) => {
     if (!user) return;
     setRejecting(true);
@@ -445,13 +398,19 @@ const Gigs = () => {
     // Send message to brand's private chat
     const { data: profile } = await supabase.from("profiles").select("display_name").eq("user_id", user.id).maybeSingle();
     const creatorName = profile?.display_name || "A creator";
-    const { data: privateRoom } = await supabase.from("chat_rooms").select("id").eq("campaign_id", campaignId).eq("type", "private").maybeSingle();
-    if (privateRoom) {
-      await supabase.from("messages").insert({
-        chat_room_id: privateRoom.id,
-        sender_id: user.id,
-        content: `👋 ${creatorName} declined the invite for "${invite._campaign?.title}".`,
-      } as any);
+    const { data: allPrivateRooms } = await supabase.from("chat_rooms").select("id, chat_participants(user_id)").eq("campaign_id", campaignId).eq("type", "private");
+    if (allPrivateRooms?.length) {
+      for (const room of allPrivateRooms) {
+        const pIds = ((room as any).chat_participants || []).map((p: any) => p.user_id);
+        if (pIds.includes(user.id) && pIds.includes(brandUserId)) {
+          await supabase.from("messages").insert({
+            chat_room_id: room.id,
+            sender_id: user.id,
+            content: `👋 ${creatorName} declined the invite for "${invite._campaign?.title}".`,
+          } as any);
+          break;
+        }
+      }
     }
 
     setInvites(prev => prev.filter(i => i.id !== invite.id));
@@ -500,6 +459,56 @@ const Gigs = () => {
     setLeavingCampaign(null);
     setLeaveReason("");
     setLeavingLoading(false);
+  };
+
+  const handleMessageBrand = async (membership: any) => {
+    if (!user) return;
+    const campaignId = membership.campaign_id;
+    const brandUserId = membership._campaign?.brand_user_id;
+    if (!brandUserId) return;
+
+    // Find existing private chat with this brand
+    const { data: existingRooms } = await supabase
+      .from("chat_rooms")
+      .select("id, chat_participants(user_id)")
+      .eq("campaign_id", campaignId)
+      .eq("type", "private");
+
+    if (existingRooms?.length) {
+      for (const room of existingRooms) {
+        const pIds = ((room as any).chat_participants || []).map((p: any) => p.user_id);
+        if (pIds.includes(user.id) && pIds.includes(brandUserId)) {
+          navigate(`/dashboard/gig/${campaignId}/private?brand=${brandUserId}`);
+          return;
+        }
+      }
+    }
+
+    // Create new private chat
+    const { data: brandProfile } = await supabase.from("brand_profiles").select("business_name").eq("user_id", brandUserId).maybeSingle();
+    const brandName = brandProfile?.business_name || "the brand";
+    const { data: newRoom } = await supabase.from("chat_rooms").insert({
+      campaign_id: campaignId, type: "private", name: `Chat with ${brandName}`,
+    } as any).select("id").single();
+
+    if (!newRoom) return;
+
+    // Add participants
+    await supabase.from("chat_participants").insert([
+      { chat_room_id: newRoom.id, user_id: user.id },
+      { chat_room_id: newRoom.id, user_id: brandUserId },
+    ] as any);
+
+    // Send welcome message
+    const { data: profile } = await supabase.from("profiles").select("display_name, username").eq("user_id", user.id).maybeSingle();
+    const creatorName = profile?.display_name || profile?.username || "A creator";
+    await supabase.from("messages").insert({
+      chat_room_id: newRoom.id,
+      sender_id: user.id,
+      content: `👋 Hi! I'd like to discuss the campaign "${membership._campaign?.title || "our collaboration"}".`,
+    } as any);
+
+    navigate(`/dashboard/gig/${campaignId}/private?brand=${brandUserId}`);
   };
 
   const aiMatches = useMemo(() => computeCreatorCampaignMatches(creatorProfile, campaigns), [creatorProfile, campaigns]);
@@ -688,10 +697,16 @@ const Gigs = () => {
                         </div>
                       </div>
                     </div>
-                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 rounded-full"
-                      onClick={(e) => { e.stopPropagation(); setLeavingCampaign(m); }}>
-                      <LogOut className="h-3.5 w-3.5" /> Leave
-                    </Button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button size="sm" variant="outline" className="gap-1.5 rounded-full"
+                        onClick={(e) => { e.stopPropagation(); handleMessageBrand(m); }}>
+                        <MessageSquare className="h-3.5 w-3.5" /> Message Brand
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 rounded-full"
+                        onClick={(e) => { e.stopPropagation(); setLeavingCampaign(m); }}>
+                        <LogOut className="h-3.5 w-3.5" /> Leave
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 );
@@ -709,10 +724,7 @@ const Gigs = () => {
               const camp = invite._campaign;
               const proposedPrice = invite.proposed_price_per_video ?? camp.price_per_video;
               const proposedVideos = invite.proposed_video_count ?? camp.expected_video_count;
-              const isPrizePool = camp.campaign_type === "prize_pool";
               const isFreeProduct = camp.is_free_product;
-              const isFixedPricing = camp.pricing_mode === "fixed" && camp.videos_mode === "fixed";
-              const canCounter = !isFreeProduct && !isFixedPricing;
               return (
                 <Card key={invite.id} className="border-border/50">
                   <CardContent className="p-5">
@@ -728,20 +740,13 @@ const Gigs = () => {
                           <div className="flex items-center gap-2 mt-1">
                             {isFreeProduct ? (
                               <Badge className="bg-purple-500/10 text-purple-600 border-0 text-[11px]">Free Product</Badge>
-                            ) : isPrizePool ? (
-                              <Badge className="bg-amber-500/10 text-amber-600 border-0 text-[11px]">Prize Pool</Badge>
                             ) : (
-                              <span className="text-sm font-bold text-foreground">HK${proposedPrice ?? 0}/video</span>
+                              <span className="text-sm font-bold text-foreground">HK${invite.proposed_price_per_video ?? camp.price_per_video ?? 0}/video</span>
                             )}
                             <span className="text-xs text-muted-foreground">×</span>
-                            {!isPrizePool && (
-                              <span className="text-sm font-medium text-foreground">{proposedVideos} video{proposedVideos !== 1 ? "s" : ""}</span>
-                            )}
-                            {isPrizePool && (
-                              <span className="text-sm font-medium text-amber-600">Until pool drains</span>
-                            )}
-                            {!isFreeProduct && proposedPrice && proposedVideos && (
-                              <span className="text-xs text-muted-foreground">· Total: HK${(Number(proposedPrice) * Number(proposedVideos)).toLocaleString()}</span>
+                            <span className="text-sm font-medium text-foreground">{invite.proposed_video_count ?? camp.expected_video_count ?? 1} video(s)</span>
+                            {!isFreeProduct && (invite.proposed_price_per_video ?? camp.price_per_video) && (invite.proposed_video_count ?? camp.expected_video_count) && (
+                              <span className="text-xs text-muted-foreground">· Total: HK${((invite.proposed_price_per_video ?? camp.price_per_video ?? 0) * (invite.proposed_video_count ?? camp.expected_video_count ?? 0)).toLocaleString()}</span>
                             )}
                           </div>
                         </div>
@@ -751,23 +756,13 @@ const Gigs = () => {
                           onClick={() => navigate(`/dashboard/gigs?invite=${invite.id}`)}>
                           View Gig
                         </Button>
-                        {canCounter && (
-                          <Button size="sm" variant="outline" className="gap-1.5"
-                            onClick={() => {
-                              setCounteringInvite(invite);
-                              setCounterPrice((proposedPrice ?? camp.price_per_video ?? "").toString());
-                              setCounterVideos((proposedVideos ?? camp.expected_video_count ?? "1").toString());
-                            }}>
-                            Counter
-                          </Button>
-                        )}
-                        <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
-                          onClick={() => handleAcceptInvite(invite)}>
-                          <Check className="h-3.5 w-3.5" /> Accept
-                        </Button>
                         <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive gap-1.5"
                           onClick={() => setRejectingInvite(invite)}>
                           <X className="h-3.5 w-3.5" /> Reject
+                        </Button>
+                        <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+                          onClick={() => handleAcceptInvite(invite)}>
+                          <Check className="h-3.5 w-3.5" /> Accept
                         </Button>
                       </div>
                     </div>
@@ -1013,10 +1008,35 @@ const Gigs = () => {
             <DialogDescription>Write a cover letter explaining why you're a great fit.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">
+            {/* Terms Summary */}
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-2">
+              <p className="text-sm font-semibold text-foreground">Your Agreed Terms</p>
+              <div className="flex items-center gap-4 text-sm">
+                {applyingTo?.is_free_product ? (
+                  <span className="font-bold text-foreground">Free Product</span>
+                ) : (
+                  <>
+                    <div>
+                      <span className="text-muted-foreground">Price:</span>{" "}
+                      <span className="font-bold text-foreground">HK${applyingTo?.price_per_video ?? 0}/video</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Videos:</span>{" "}
+                      <span className="font-bold text-foreground">{applyingTo?.expected_video_count}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Total:</span>{" "}
+                      <span className="font-bold text-foreground">HK${((applyingTo?.price_per_video ?? 0) * (applyingTo?.expected_video_count ?? 0)).toLocaleString()}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">These terms are locked in when you apply. The brand can edit them later.</p>
+            </div>
             <div>
               <Textarea
                 placeholder="Tell the brand why you're the perfect creator for this campaign. Share your experience, content style, audience match, etc."
-                value={coverLetter} onChange={(e) => setCoverLetter(e.target.value)} className="min-h-[200px] rounded-xl"
+                value={coverLetter} onChange={(e) => setCoverLetter(e.target.value)} className="min-h-[150px] rounded-xl"
               />
               <p className={`text-xs mt-1.5 ${coverLetter.length >= 300 ? "text-muted-foreground" : "text-destructive"}`}>
                 {coverLetter.length}/300 characters minimum
@@ -1055,43 +1075,6 @@ const Gigs = () => {
               <Button variant="destructive" className="rounded-full" onClick={handleLeaveCampaign} disabled={leavingLoading || !leaveReason.trim()}>
                 {leavingLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                 Leave permanently
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Counter Offer Dialog */}
-      <Dialog open={!!counteringInvite} onOpenChange={(open) => { if (!open) { setCounteringInvite(null); setCounterPrice(""); setCounterVideos(""); } }}>
-        <DialogContent className="max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Submit Counter Offer</DialogTitle>
-            <DialogDescription>Propose different terms to the brand for "{counteringInvite?._campaign?.title}"</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="p-3 rounded-lg bg-muted border border-border/50">
-              <p className="text-xs text-muted-foreground mb-1">Brand's original offer:</p>
-              <p className="text-sm font-medium">
-                HK${counteringInvite?.proposed_price_per_video ?? counteringInvite?._campaign?.price_per_video ?? 0}/video × {counteringInvite?.proposed_video_count ?? counteringInvite?._campaign?.expected_video_count ?? 1} video(s)
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Your proposed price per video (HKD)</label>
-              <Input type="number" value={counterPrice} onChange={(e) => setCounterPrice(e.target.value)} placeholder="e.g. 600" />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Your proposed number of videos</label>
-              <Input type="number" value={counterVideos} onChange={(e) => setCounterVideos(e.target.value)} placeholder="e.g. 2" />
-            </div>
-            {counterPrice && counterVideos && (
-              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                <p className="text-sm font-medium">Total: HK${(Number(counterPrice) * Number(counterVideos)).toLocaleString()}</p>
-              </div>
-            )}
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1 rounded-full" onClick={() => { setCounteringInvite(null); }}>Cancel</Button>
-              <Button className="flex-1 rounded-full" disabled={countering || !counterPrice || !counterVideos} onClick={handleCounterOfferInvite}>
-                {countering ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Send Counter
               </Button>
             </div>
           </div>
