@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Briefcase, Clock, DollarSign, MapPin, Send, Loader2, Check, LogOut, Gift, Video, MoreHorizontal, Sparkles, Filter, X, ChevronDown, Globe, Tag, Users, ExternalLink, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { computeCreatorCampaignMatches } from "@/hooks/useSimpleMatch";
 import ActiveGigHub from "@/components/dashboard/ActiveGigHub";
 
@@ -45,6 +45,8 @@ const CATEGORY_PLATFORMS = ["instagram", "tiktok", "facebook", "youtube"];
 const Gigs = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [appliedCampaigns, setAppliedCampaigns] = useState<Set<string>>(new Set());
@@ -202,6 +204,16 @@ const Gigs = () => {
     };
     fetchData();
   }, [user]);
+
+  // If ?apply=<campaignId> is in the URL, open that campaign's apply dialog
+  useEffect(() => {
+    if (!dataReady) return;
+    const applyId = searchParams.get("apply");
+    if (applyId && campaigns.length > 0) {
+      const camp = campaigns.find(c => c.id === applyId);
+      if (camp) setApplyingTo(camp);
+    }
+  }, [dataReady, campaigns, searchParams]);
 
   const handleApply = async () => {
     if (!user || !applyingTo) return;
