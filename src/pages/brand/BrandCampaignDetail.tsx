@@ -10,6 +10,7 @@ import PostingSchedule from "@/components/campaign/PostingSchedule";
 import CampaignSettings from "@/components/campaign/CampaignSettings";
 import AllCreators from "@/components/campaign/AllCreators";
 import CreatorPricingSpreadsheet from "@/components/campaign/CreatorPricingSpreadsheet";
+import BrandVideos from "@/components/campaign/BrandVideos";
 
 const BrandCampaignDetail = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -52,7 +53,11 @@ const BrandCampaignDetail = () => {
 
       <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="videos" className="gap-1.5"><Video className="h-3.5 w-3.5" /> Video Review</TabsTrigger>
+          {campaign.campaign_type === "prize_pool" ? (
+            <TabsTrigger value="videos" className="gap-1.5"><Video className="h-3.5 w-3.5" /> Videos</TabsTrigger>
+          ) : (
+            <TabsTrigger value="videos" className="gap-1.5"><Video className="h-3.5 w-3.5" /> Video Review</TabsTrigger>
+          )}
           <TabsTrigger value="posted" className="gap-1.5"><Link2 className="h-3.5 w-3.5" /> Posted Videos</TabsTrigger>
           {campaign.posting_schedule_enabled && (
             <TabsTrigger value="schedule" className="gap-1.5"><Calendar className="h-3.5 w-3.5" /> Schedule</TabsTrigger>
@@ -63,7 +68,11 @@ const BrandCampaignDetail = () => {
         </TabsList>
 
         <TabsContent value="videos">
-          <VideoReviewForCampaign campaignId={campaignId!} />
+          {campaign.campaign_type === "prize_pool" ? (
+            <BrandVideos campaignId={campaignId!} />
+          ) : (
+            <VideoReviewForCampaign campaignId={campaignId!} />
+          )}
         </TabsContent>
         <TabsContent value="posted">
           <BrandPostedForCampaign campaignId={campaignId!} />

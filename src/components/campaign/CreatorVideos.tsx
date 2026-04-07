@@ -31,15 +31,19 @@ const CreatorVideos = ({ campaignId, campaignTitle }: Props) => {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [expectedCount, setExpectedCount] = useState(0);
+  const [campaignType, setCampaignType] = useState<string>("standard");
+  const [campaignStatus, setCampaignStatus] = useState<string>("active");
 
   const loadSubs = async () => {
     if (!user) return;
     const [{ data }, { data: campData }] = await Promise.all([
       supabase.from("video_submissions").select("*").eq("creator_user_id", user.id).eq("campaign_id", campaignId).order("created_at", { ascending: false }),
-      supabase.from("campaigns").select("expected_video_count").eq("id", campaignId).single(),
+      supabase.from("campaigns").select("expected_video_count, campaign_type, status").eq("id", campaignId).single(),
     ]);
     setSubmissions(data || []);
     setExpectedCount((campData as any)?.expected_video_count || 0);
+    setCampaignType((campData as any)?.campaign_type || "standard");
+    setCampaignStatus((campData as any)?.status || "active");
     setLoading(false);
   };
 
@@ -50,6 +54,10 @@ const CreatorVideos = ({ campaignId, campaignTitle }: Props) => {
       toast({ title: "Please fill all fields", variant: "destructive" });
       return;
     }
+    if (campaignStatus === "ended") {
+      toast({ title: "Campaign has ended", description: "Creators can no longer submit videos.", variant: "destructive" });
+      return;
+    }
     setUploading(true);
     const ext = file.name.split(".").pop();
     const path = `${user.id}/${Date.now()}.${ext}`;
@@ -57,23 +65,34 @@ const CreatorVideos = ({ campaignId, campaignTitle }: Props) => {
     if (uploadErr) { toast({ title: "Upload failed", description: uploadErr.message, variant: "destructive" }); setUploading(false); return; }
     const { data: urlData } = supabase.storage.from("video-submissions").getPublicUrl(path);
 
-    const { error } = await supabase.from("video_submissions").insert({ campaign_id: campaignId, creator_user_id: user.id, title: title.trim(), video_url: urlData.publicUrl } as any);
+    const isPrizePool = campaignType === "prize_pool";
+    const insertData: any = { campaign_id: campaignId, creator_user_id: user.id, title: title.trim(), video_url: urlData.publicUrl };
+    if (isPrizePool) {
+      insertData.status = "accepted"; // Auto-accept for prize pool
+    }
+    const { error } = await supabase.from("video_submissions").insert(insertData);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setUploading(false); return; }
 
-    const { data: camp } = await supabase.from("campaigns").select("brand_user_id").eq("id", campaignId).single();
-    if (camp) {
-      await supabase.from("notifications").insert({ user_id: camp.brand_user_id, type: "video_submission", title: "New Video Submitted", body: `A creator submitted "${title.trim()}" for "${campaignTitle}"`, link: `/brand/campaigns/${campaignId}` });
+    if (!isPrizePool) {
+      const { data: camp } = await supabase.from("campaigns").select("brand_user_id").eq("id", campaignId).single();
+      if (camp) {
+        await supabase.from("notifications").insert({ user_id: camp.brand_user_id, type: "video_submission", title: "New Video Submitted", body: `A creator submitted "${title.trim()}" for "${campaignTitle}"`, link: `/brand/campaigns/${campaignId}` });
+      }
     }
 
     await loadSubs();
     setTitle(""); setFile(null);
     if (fileRef.current) fileRef.current.value = "";
-    toast({ title: "Video submitted for review!" });
+    toast({ title: isPrizePool ? "Video posted!" : "Video submitted for review!" });
     setUploading(false);
   };
 
   const handleReupload = async () => {
     if (!user || !reuploadSub || !reuploadFile) return;
+    if (campaignStatus === "ended") {
+      toast({ title: "Campaign has ended", description: "Creators can no longer re-upload videos.", variant: "destructive" });
+      return;
+    }
     setReuploadLoading(true);
     const ext = reuploadFile.name.split(".").pop();
     const path = `${user.id}/${Date.now()}.${ext}`;
@@ -81,7 +100,12 @@ const CreatorVideos = ({ campaignId, campaignTitle }: Props) => {
     if (uploadErr) { toast({ title: "Upload failed", variant: "destructive" }); setReuploadLoading(false); return; }
     const { data: urlData } = supabase.storage.from("video-submissions").getPublicUrl(path);
 
-    await supabase.from("video_submissions").update({ video_url: urlData.publicUrl, status: "pending", feedback: null, title: reuploadTitle.trim() || reuploadSub.title, updated_at: new Date().toISOString() } as any).eq("id", reuploadSub.id);
+    const isPrizePool = campaignType === "prize_pool";
+    const updateData: any = { video_url: urlData.publicUrl, feedback: null, title: reuploadTitle.trim() || reuploadSub.title, updated_at: new Date().toISOString() };
+    if (isPrizePool) {
+      updateData.status = "accepted";
+    }
+    await supabase.from("video_submissions").update(updateData).eq("id", reuploadSub.id);
     await loadSubs();
     setReuploadSub(null); setReuploadFile(null); setReuploadTitle("");
     toast({ title: "Video re-submitted!" });
@@ -93,8 +117,9 @@ const CreatorVideos = ({ campaignId, campaignTitle }: Props) => {
   const pendingCount = submissions.filter(s => s.status === "pending").length;
   const rejectedCount = submissions.filter(s => s.status === "rejected").length;
   const acceptedCount = submissions.filter(s => s.status === "accepted").length;
-
-  const videosRemaining = Math.max(0, expectedCount - acceptedCount);
+  const isPrizePool = campaignType === "prize_pool";
+  const videosRemaining = isPrizePool ? null : Math.max(0, expectedCount - acceptedCount);
+  const campaignEnded = campaignStatus === "ended";
 
   return (
     <div className="space-y-6">
@@ -113,15 +138,22 @@ const CreatorVideos = ({ campaignId, campaignTitle }: Props) => {
           <p className="text-[11px] text-muted-foreground">Rejected</p>
         </div>
         <div className="rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 p-3 text-center">
-          <p className="text-lg font-bold text-foreground">{videosRemaining}</p>
-          <p className="text-[11px] text-muted-foreground">Remaining</p>
+          <p className="text-lg font-bold text-foreground">{isPrizePool ? (campaignEnded ? "Ended" : "Open") : videosRemaining}</p>
+          <p className="text-[11px] text-muted-foreground">{isPrizePool ? "Prize Pool" : "Remaining"}</p>
         </div>
       </div>
 
       {/* Submit form */}
+      {campaignEnded ? (
+        <Card className="border-border/50">
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">This campaign has ended. No more videos can be submitted.</p>
+          </CardContent>
+        </Card>
+      ) : (
       <Card className="border-border/50">
         <CardHeader><CardTitle className="text-lg">Submit a Video</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4}>
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">Title</p>
             <Input placeholder="e.g. Product Unboxing Take 1" value={title} onChange={e => setTitle(e.target.value)} />
@@ -135,10 +167,11 @@ const CreatorVideos = ({ campaignId, campaignTitle }: Props) => {
             </div>
           </div>
           <Button onClick={handleSubmit} disabled={uploading || !title.trim() || !file} className="w-full gap-2">
-            {uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</> : <><Upload className="h-4 w-4" /> Submit Video</>}
+            {uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</> : <><Upload className="h-4 w-4" /> {isPrizePool ? "Post Video" : "Submit Video"}</>}
           </Button>
         </CardContent>
       </Card>
+      )}
 
       {/* Submissions list */}
       {submissions.length > 0 && (

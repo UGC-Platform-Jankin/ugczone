@@ -211,6 +211,7 @@ export type Database = {
           calendly_link: string | null
           campaign_length_days: number | null
           communication_type: string
+          campaign_type: string
           created_at: string
           description: string | null
           expected_video_count: number
@@ -228,6 +229,7 @@ export type Database = {
           status: string
           target_regions: string[]
           title: string
+          total_budget: number | null
           updated_at: string
           videos_mode: string
         }
@@ -238,6 +240,7 @@ export type Database = {
           calendly_link?: string | null
           campaign_length_days?: number | null
           communication_type?: string
+          campaign_type?: string
           created_at?: string
           description?: string | null
           expected_video_count?: number
@@ -255,6 +258,7 @@ export type Database = {
           status?: string
           target_regions?: string[]
           title: string
+          total_budget?: number | null
           updated_at?: string
           videos_mode?: string
         }
@@ -265,6 +269,7 @@ export type Database = {
           calendly_link?: string | null
           campaign_length_days?: number | null
           communication_type?: string
+          campaign_type?: string
           created_at?: string
           description?: string | null
           expected_video_count?: number
@@ -282,6 +287,7 @@ export type Database = {
           status?: string
           target_regions?: string[]
           title?: string
+          total_budget?: number | null
           updated_at?: string
           videos_mode?: string
         }

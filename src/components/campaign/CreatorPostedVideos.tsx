@@ -30,13 +30,14 @@ const CreatorPostedVideos = ({ campaignId, campaignTitle }: Props) => {
   const [campaignPlatforms, setCampaignPlatforms] = useState<string[]>([]);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduleEvents, setScheduleEvents] = useState<any[]>([]);
+  const [campaignStatus, setCampaignStatus] = useState<string>("active");
 
   useEffect(() => {
     if (!user) return;
     const load = async () => {
       const [{ data: subs }, { data: campData }, { data: events }] = await Promise.all([
         supabase.from("video_submissions").select("*").eq("creator_user_id", user.id).eq("campaign_id", campaignId).eq("status", "accepted"),
-        supabase.from("campaigns").select("expected_video_count, platforms, posting_schedule_enabled").eq("id", campaignId).single(),
+        supabase.from("campaigns").select("expected_video_count, platforms, posting_schedule_enabled, status").eq("id", campaignId).single(),
         supabase.from("posting_schedule").select("*").eq("campaign_id", campaignId).order("event_date"),
       ]);
 
@@ -45,6 +46,7 @@ const CreatorPostedVideos = ({ campaignId, campaignTitle }: Props) => {
       setExpectedCount((campData as any)?.expected_video_count || 0);
       setCampaignPlatforms((campData as any)?.platforms || []);
       setScheduleEnabled((campData as any)?.posting_schedule_enabled || false);
+      setCampaignStatus((campData as any)?.status || "active");
       setScheduleEvents(events || []);
 
       if (accepted.length > 0) {
@@ -68,6 +70,7 @@ const CreatorPostedVideos = ({ campaignId, campaignTitle }: Props) => {
   };
 
   const handleSubmitLinks = async () => {
+    if (campaignStatus === "ended") { toast({ title: "Campaign has ended", description: "Creators can no longer submit links.", variant: "destructive" }); return; }
     if (!selectedSub) { toast({ title: "Select a submission", variant: "destructive" }); return; }
     const validLinks = links.filter(l => l.platform && l.url.trim());
     if (validLinks.length === 0) { toast({ title: "Add at least one link", variant: "destructive" }); return; }
@@ -128,7 +131,7 @@ const CreatorPostedVideos = ({ campaignId, campaignTitle }: Props) => {
         </div>
       </div>
 
-      {acceptedSubs.length > 0 ? (
+      {acceptedSubs.length > 0 && campaignStatus !== "ended" ? (
         <Card className="border-border/50">
           <CardHeader><CardTitle className="text-lg">Submit Posted Video Links</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -166,6 +169,13 @@ const CreatorPostedVideos = ({ campaignId, campaignTitle }: Props) => {
             <Button onClick={handleSubmitLinks} disabled={submitting} className="w-full gap-2">
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} Submit Links
             </Button>
+          </CardContent>
+        </Card>
+      ) : campaignStatus === "ended" ? (
+        <Card className="border-border/50 border-dashed">
+          <CardContent className="py-12 text-center">
+            <Link2 className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">This campaign has ended. No more links can be submitted.</p>
           </CardContent>
         </Card>
       ) : (

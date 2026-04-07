@@ -46,6 +46,7 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
   const [campaign, setCampaign] = useState<any>(null);
   const [rows, setRows] = useState<CreatorRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [remainingBudget, setRemainingBudget] = useState<number>(0);
   const [saving, setSaving] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<{ appId: string; field: "price" | "videos" } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
@@ -79,6 +80,19 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
       profile: profileMap[app.creator_user_id],
       editing: { agreed_price_per_video: false, agreed_video_count: false },
     })));
+
+    // Compute remaining budget for prize pool
+    if (campRes.data?.campaign_type === "prize_pool" && campRes.data?.total_budget) {
+      const totalBudget = Number(campRes.data.total_budget);
+      // Sum agreed fees from all accepted applications
+      const totalAgreed = apps
+        .filter((a: any) => a.status === "accepted")
+        .reduce((sum: number, a: any) => {
+          return sum + ((a.agreed_price_per_video || 0) * (a.agreed_video_count || 0));
+        }, 0);
+      setRemainingBudget(totalBudget - totalAgreed);
+    }
+
     setLoading(false);
   };
 
@@ -183,35 +197,71 @@ const CreatorPricingSpreadsheet = ({ campaignId }: Props) => {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <DollarSign className="h-5 w-5 text-blue-500" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Agreed Fees</p>
-              <p className="text-xl font-bold">HK${grandTotal.toLocaleString()}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-              <AlertCircle className="h-5 w-5 text-yellow-500" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Pending Pricing</p>
-              <p className="text-xl font-bold">{rows.filter(r => r.application.status === "accepted" && r.application.pricing_status === "pending").length}</p>
-            </div>
-          </CardContent>
-        </Card>
+        {campaign?.campaign_type === "prize_pool" ? (
+          <>
+            <Card className="border-border/50">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Spent</p>
+                  <p className="text-xl font-bold">HK${grandTotal.toLocaleString()}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Remaining Budget</p>
+                  <p className="text-xl font-bold">HK${Math.max(0, remainingBudget).toLocaleString()}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <>
+            <Card className="border-border/50">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Agreed Fees</p>
+                  <p className="text-xl font-bold">HK${grandTotal.toLocaleString()}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-yellow-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Pending Pricing</p>
+                  <p className="text-xl font-bold">{rows.filter(r => r.application.status === "accepted" && r.application.pricing_status === "pending").length}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Mode info */}
-      <div className="flex gap-3 text-xs text-muted-foreground">
-        <span className="px-2 py-1 rounded bg-secondary">Price: {isFixedPrice ? "Fixed" : "Flexible (per-creator)"}</span>
-        <span className="px-2 py-1 rounded bg-secondary">Videos: {isFixedVideos ? "Fixed" : "Flexible (per-creator)"}</span>
-      </div>
+      {campaign?.campaign_type === "prize_pool" ? (
+        <div className="flex gap-3 text-xs text-muted-foreground">
+          <span className="px-2 py-1 rounded bg-amber-500/10 text-amber-600">Prize Pool Campaign</span>
+          <span className="px-2 py-1 rounded bg-secondary">Total Budget: HK${Number(campaign?.total_budget || 0).toLocaleString()}</span>
+        </div>
+      ) : (
+        <div className="flex gap-3 text-xs text-muted-foreground">
+          <span className="px-2 py-1 rounded bg-secondary">Price: {isFixedPrice ? "Fixed" : "Flexible (per-creator)"}</span>
+          <span className="px-2 py-1 rounded bg-secondary">Videos: {isFixedVideos ? "Fixed" : "Flexible (per-creator)"}</span>
+        </div>
+      )}
 
       {/* Spreadsheet */}
       <Card className="border-border/50 overflow-hidden">

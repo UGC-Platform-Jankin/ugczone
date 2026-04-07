@@ -81,6 +81,10 @@ const CreateCampaign = () => {
   const [pricingMode, setPricingMode] = useState<"fixed" | "flexible">(reuse?.pricing_mode || "fixed");
   const [videosMode, setVideosMode] = useState<"fixed" | "flexible">(reuse?.videos_mode || "fixed");
 
+  // Prize pool campaign
+  const [campaignType, setCampaignType] = useState<"standard" | "prize_pool">(reuse?.campaign_type || "standard");
+  const [totalBudget, setTotalBudget] = useState(reuse?.total_budget?.toString() || "");
+
   useEffect(() => {
     if (!authLoading && !user) navigate("/brand/auth");
   }, [user, authLoading, navigate]);
@@ -126,8 +130,12 @@ const CreateCampaign = () => {
       toast({ title: "Select at least one platform", variant: "destructive" });
       return;
     }
-    if (!isFreeProduct && (!pricePerVideo || Number(pricePerVideo) <= 0)) {
+    if (!isFreeProduct && campaignType === "standard" && (!pricePerVideo || Number(pricePerVideo) <= 0)) {
       toast({ title: "Price required", description: "Enter a price per video or toggle free product.", variant: "destructive" });
+      return;
+    }
+    if (campaignType === "prize_pool" && (!totalBudget || Number(totalBudget) <= 0)) {
+      toast({ title: "Total budget required", description: "Enter a total prize pool budget.", variant: "destructive" });
       return;
     }
     if (communicationType === "external" && !externalCommLink.trim()) {
@@ -163,6 +171,8 @@ const CreateCampaign = () => {
       calendly_link: calendlyEnabled ? calendlyLink.trim() : null,
       pricing_mode: pricingMode,
       videos_mode: videosMode,
+      campaign_type: campaignType,
+      total_budget: campaignType === "prize_pool" ? Number(totalBudget) : null,
     } as any).select("id, title, max_creators, communication_type").single();
     setSubmitting(false);
 
@@ -272,26 +282,50 @@ const CreateCampaign = () => {
                   <Switch checked={isFreeProduct} onCheckedChange={setIsFreeProduct} />
                 </div>
 
-                {!isFreeProduct && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Campaign Type</Label>
+                  <RadioGroup value={campaignType} onValueChange={(v) => setCampaignType(v as "standard" | "prize_pool")} className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="standard" id="type-standard" />
+                      <Label htmlFor="type-standard" className="text-sm cursor-pointer">Standard — Pay per video</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="prize_pool" id="type-prize" />
+                      <Label htmlFor="type-prize" className="text-sm cursor-pointer">Prize Pool — Fixed budget, creators compete until depleted</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                {campaignType === "prize_pool" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="totalBudget">Total Prize Pool Budget (HKD) *</Label>
+                    <Input id="totalBudget" type="number" min="1" step="1" placeholder="e.g. 5000" value={totalBudget} onChange={(e) => setTotalBudget(e.target.value)} />
+                    <p className="text-xs text-muted-foreground">Total budget shared across all creators until depleted</p>
+                  </div>
+                )}
+
+                {campaignType === "standard" && !isFreeProduct && (
                   <div className="space-y-2">
                     <Label htmlFor="price">Price per Video (HKD) *</Label>
                     <Input id="price" type="number" min="1" step="1" placeholder="e.g. 500" value={pricePerVideo} onChange={(e) => setPricePerVideo(e.target.value)} />
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Pricing Model</Label>
-                  <RadioGroup value={pricingMode} onValueChange={(v) => setPricingMode(v as "fixed" | "flexible")} className="flex gap-4">
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="fixed" id="price-fixed" />
-                      <Label htmlFor="price-fixed" className="text-sm cursor-pointer">Fixed (same for all creators)</Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="flexible" id="price-flexible" />
-                      <Label htmlFor="price-flexible" className="text-sm cursor-pointer">Flexible (per-creator pricing)</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
+                {campaignType === "standard" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Pricing Model</Label>
+                    <RadioGroup value={pricingMode} onValueChange={(v) => setPricingMode(v as "fixed" | "flexible")} className="flex gap-4">
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem value="fixed" id="price-fixed" />
+                        <Label htmlFor="price-fixed" className="text-sm cursor-pointer">Fixed (same for all creators)</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem value="flexible" id="price-flexible" />
+                        <Label htmlFor="price-flexible" className="text-sm cursor-pointer">Flexible (per-creator pricing)</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                )}
               </div>
 
               {/* Target Regions (multi-select) */}
@@ -333,19 +367,21 @@ const CreateCampaign = () => {
                 <Input id="videoCount" type="number" min="1" max="100" value={expectedVideoCount} onChange={(e) => setExpectedVideoCount(e.target.value)} required />
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Video Count Model</Label>
-                <RadioGroup value={videosMode} onValueChange={(v) => setVideosMode(v as "fixed" | "flexible")} className="flex gap-4">
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="fixed" id="videos-fixed" />
-                    <Label htmlFor="videos-fixed" className="text-sm cursor-pointer">Fixed (same for all creators)</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="flexible" id="videos-flexible" />
-                    <Label htmlFor="videos-flexible" className="text-sm cursor-pointer">Flexible (per-creator video count)</Label>
-                  </div>
-                </RadioGroup>
-              </div>
+              {campaignType === "standard" && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Video Count Model</Label>
+                  <RadioGroup value={videosMode} onValueChange={(v) => setVideosMode(v as "fixed" | "flexible")} className="flex gap-4">
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="fixed" id="videos-fixed" />
+                      <Label htmlFor="videos-fixed" className="text-sm cursor-pointer">Fixed (same for all creators)</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="flexible" id="videos-flexible" />
+                      <Label htmlFor="videos-flexible" className="text-sm cursor-pointer">Flexible (per-creator video count)</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
 
               {/* Campaign Length */}
               <div className="space-y-2">
