@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Building2, LogOut, Users, Megaphone, BarChart3, User, MessageCircle, Sun, Moon, Sparkles, ChevronDown, ChevronRight, Video, Link2, Calendar, Settings, DollarSign, Send, Search } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
-import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import {
@@ -29,13 +28,11 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
   const [campaignNotifs, setCampaignNotifs] = useState(0);
   const [perCampaignNotifs, setPerCampaignNotifs] = useState<Record<string, number>>({});
   const [pendingInviteCount, setPendingInviteCount] = useState(0);
-  const unread = useUnreadMessages();
   const { theme, toggleTheme } = useTheme();
 
   const navItems = [
     { label: "Overview", icon: BarChart3, path: "/brand/dashboard", count: 0 },
     { label: "Campaigns", icon: Megaphone, path: "/brand/campaigns", count: campaignNotifs },
-    { label: "Messages", icon: MessageCircle, path: "/brand/messages", count: unread.total },
     { label: "Find Creators", icon: Search, path: "/brand/creators", count: 0, subItems: [
       { label: "Browse", icon: Users, path: "/brand/creators" },
       { label: "Invites", icon: Send, path: "/brand/creators/invites", count: pendingInviteCount },
@@ -103,6 +100,8 @@ const BrandLayout = ({ children }: { children: React.ReactNode }) => {
     { label: "Videos", icon: Video, suffix: "" },
     { label: "Posted", icon: Link2, suffix: "/posted" },
     { label: "Schedule", icon: Calendar, suffix: "/schedule" },
+    { label: "Chat", icon: MessageCircle, suffix: "/messages" },
+    { label: "Private", icon: MessageCircle, suffix: "/private" },
     { label: "Pricing", icon: DollarSign, suffix: "/pricing" },
     { label: "Settings", icon: Settings, suffix: "/settings" },
   ];

@@ -16,7 +16,6 @@ import CreatorOverview from "./pages/dashboard/CreatorOverview.tsx";
 import Gigs from "./pages/dashboard/Gigs.tsx";
 import Profile from "./pages/dashboard/Profile.tsx";
 import ProfileSetup from "./pages/dashboard/ProfileSetup.tsx";
-import Messages from "./components/dashboard/Messages.tsx";
 import VideoSubmissions from "./pages/dashboard/VideoSubmissions.tsx";
 import PostedVideos from "./pages/dashboard/PostedVideos.tsx";
 import CreatorGigDetail from "./pages/dashboard/CreatorGigDetail.tsx";
@@ -58,7 +57,6 @@ const App = () => (
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/dashboard" element={<DashboardLayout><CreatorOverview /></DashboardLayout>} />
               <Route path="/dashboard/gigs" element={<DashboardLayout><Gigs /></DashboardLayout>} />
-              <Route path="/dashboard/messages" element={<DashboardLayout><Messages /></DashboardLayout>} />
               <Route path="/dashboard/profile" element={<DashboardLayout><Profile /></DashboardLayout>} />
               <Route path="/dashboard/admin" element={<DashboardLayout><AdminPanel /></DashboardLayout>} />
               <Route path="/dashboard/videos" element={<DashboardLayout><VideoSubmissions /></DashboardLayout>} />
@@ -67,6 +65,8 @@ const App = () => (
               <Route path="/dashboard/gig/:campaignId/posted" element={<DashboardLayout><CreatorGigDetail /></DashboardLayout>} />
               <Route path="/dashboard/gig/:campaignId/schedule" element={<DashboardLayout><CreatorGigDetail /></DashboardLayout>} />
               <Route path="/dashboard/gig/:campaignId/resources" element={<DashboardLayout><CreatorGigDetail /></DashboardLayout>} />
+              <Route path="/dashboard/gig/:campaignId/messages" element={<DashboardLayout><CreatorGigDetail /></DashboardLayout>} />
+              <Route path="/dashboard/gig/:campaignId/private" element={<DashboardLayout><CreatorGigDetail /></DashboardLayout>} />
               <Route path="/dashboard/setup" element={<ProfileSetup />} />
               <Route path="/brand/auth" element={<BrandAuth />} />
               <Route path="/brand/setup" element={<BrandSetup />} />
@@ -79,7 +79,8 @@ const App = () => (
               <Route path="/brand/campaigns/:campaignId/schedule" element={<BrandLayout><BrandCampaignDetail /></BrandLayout>} />
               <Route path="/brand/campaigns/:campaignId/creators" element={<BrandLayout><BrandCampaignDetail /></BrandLayout>} />
               <Route path="/brand/campaigns/:campaignId/pricing" element={<BrandLayout><BrandCampaignDetail /></BrandLayout>} />
-              <Route path="/brand/messages" element={<BrandLayout><Messages /></BrandLayout>} />
+              <Route path="/brand/campaigns/:campaignId/messages" element={<BrandLayout><BrandCampaignDetail /></BrandLayout>} />
+              <Route path="/brand/campaigns/:campaignId/private" element={<BrandLayout><BrandCampaignDetail /></BrandLayout>} />
               <Route path="/brand/creators" element={<BrandLayout><FindCreators /></BrandLayout>} />
               <Route path="/brand/creators/invites" element={<BrandLayout><BrandInvites /></BrandLayout>} />
               <Route path="/brand/profile" element={<BrandLayout><BrandProfileContent /></BrandLayout>} />

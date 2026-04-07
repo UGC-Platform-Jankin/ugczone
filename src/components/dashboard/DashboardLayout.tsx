@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import CreatorOnboarding from "@/components/onboarding/CreatorOnboarding";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Briefcase, User, LogOut, MessageCircle, Shield, LayoutDashboard, Sun, Moon, Sparkles, ChevronDown, ChevronRight, Video, Link2, Calendar, Building2, BookOpen } from "lucide-react";
+import { Briefcase, User, LogOut, Shield, LayoutDashboard, Sun, Moon, Sparkles, ChevronDown, ChevronRight, Video, Link2, Calendar, Building2, BookOpen } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import { supabase } from "@/integrations/supabase/client";
-import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import {
@@ -29,13 +28,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const [expandedGigs, setExpandedGigs] = useState<Set<string>>(new Set());
   const [gigNotifs, setGigNotifs] = useState(0); // unread gig-related notifs
   const [activeGigNotifs, setActiveGigNotifs] = useState<Record<string, number>>({}); // per-gig notifs
-  const unread = useUnreadMessages();
   const { theme, toggleTheme } = useTheme();
 
   const navItems = [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard", count: 0 },
     { label: "Gigs", icon: Briefcase, path: "/dashboard/gigs", count: gigNotifs },
-    { label: "Messages", icon: MessageCircle, path: "/dashboard/messages", count: unread.total },
     { label: "Profile", icon: User, path: "/dashboard/profile", count: 0 },
   ];
 
@@ -119,6 +116,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     { label: "Posted", icon: Link2, suffix: "/posted" },
     { label: "Schedule", icon: Calendar, suffix: "/schedule" },
     { label: "Resources", icon: BookOpen, suffix: "/resources" },
+    { label: "Chat", icon: MessageCircle, suffix: "/messages" },
+    { label: "Private", icon: MessageCircle, suffix: "/private" },
   ];
 
   // Find the current nav icon for header
