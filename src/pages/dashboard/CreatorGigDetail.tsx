@@ -159,10 +159,14 @@ const CreatorGigDetail = () => {
           <CreatorResources campaignId={campaignId!} />
         </TabsContent>
         <TabsContent value="messages">
-          <CampaignChat campaignId={campaignId!} roomType="group" />
+          <div className="h-[580px]">
+            <CampaignChat campaignId={campaignId!} roomType="group" />
+          </div>
         </TabsContent>
         <TabsContent value="private">
-          <CampaignChat campaignId={campaignId!} roomType="private" />
+          <div className="h-[580px]">
+            <CampaignChat campaignId={campaignId!} roomType="private" />
+          </div>
         </TabsContent>
       </Tabs>
 

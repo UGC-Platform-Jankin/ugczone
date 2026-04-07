@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send as SendIcon, Loader2, Paperclip, Image, Mic, X, FileText, Download, Play, Pause, Users } from "lucide-react";
+import { Send as SendIcon, Loader2, Paperclip, Image, Mic, X, FileText, Download, Play, Pause, Users, ChevronDown } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { Check as CheckIcon, CheckCheck } from "lucide-react";
 
@@ -74,6 +75,7 @@ const CampaignChat = ({ campaignId, roomType, isBrandView = false }: Props) => {
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [membersOpen, setMembersOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
@@ -384,10 +386,15 @@ const CampaignChat = ({ campaignId, roomType, isBrandView = false }: Props) => {
         <Avatar className="h-9 w-9 shrink-0">
           <AvatarFallback className="bg-primary/10 text-primary text-sm">{(room.name || "G")[0]?.toUpperCase()}</AvatarFallback>
         </Avatar>
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="font-medium text-sm text-foreground">{room.name || (roomType === "group" ? "Group Chat" : "Chat")}</p>
           <p className="text-xs text-muted-foreground">{roomType === "group" ? `${Object.keys(participants).length} members` : "Direct message"}</p>
         </div>
+        {roomType === "group" && (
+          <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setMembersOpen(true)}>
+            <Users className="h-3.5 w-3.5" /> Members
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
@@ -494,6 +501,43 @@ const CampaignChat = ({ campaignId, roomType, isBrandView = false }: Props) => {
           {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendIcon className="h-4 w-4" />}
         </Button>
       </div>
+
+      {/* Members Sheet */}
+      <Sheet open={membersOpen} onOpenChange={setMembersOpen}>
+        <SheetContent side="right" className="w-[320px] sm:w-[360px]">
+          <SheetHeader>
+            <SheetTitle className="text-base">Group Members</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-2">
+            {Object.entries(participants).map(([uid, p]) => {
+              const isMe = uid === user?.id;
+              const isBrand = !!(p as any).business_name;
+              return (
+                <div key={uid} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarImage src={p.avatar_url || (p as any).logo_url || undefined} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
+                      {(p.display_name || (p as any).business_name || "?")[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {p.display_name || (p as any).business_name || "User"}
+                      {isMe && <span className="text-primary ml-1 text-xs">(You)</span>}
+                    </p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {isBrand ? "Brand" : "Creator"}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+            {Object.keys(participants).length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-8">No members found</p>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

@@ -94,10 +94,14 @@ const BrandCampaignDetail = () => {
           <CreatorPricingSpreadsheet campaignId={campaignId!} />
         </TabsContent>
         <TabsContent value="messages">
-          <CampaignChat campaignId={campaignId!} roomType="group" isBrandView />
+          <div className="h-[580px]">
+            <CampaignChat campaignId={campaignId!} roomType="group" isBrandView />
+          </div>
         </TabsContent>
         <TabsContent value="private">
-          <CampaignChat campaignId={campaignId!} roomType="private" isBrandView />
+          <div className="h-[580px]">
+            <CampaignChat campaignId={campaignId!} roomType="private" isBrandView />
+          </div>
         </TabsContent>
         <TabsContent value="settings">
           <CampaignSettings campaignId={campaignId!} />
