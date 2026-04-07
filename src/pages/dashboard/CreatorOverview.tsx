@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -147,7 +147,7 @@ const CreatorOverview = () => {
             </div>
             <div>
               <h2 className="text-lg font-heading font-bold text-foreground">Recommended For You</h2>
-              <p className="text-xs text-muted-foreground">AI-matched based on your profile</p>
+              <p className="text-xs text-muted-foreground">Matched based on your profile</p>
             </div>
           </div>
           <Link to="/dashboard/gigs" className="text-sm text-primary hover:underline flex items-center gap-1">
@@ -155,10 +155,10 @@ const CreatorOverview = () => {
           </Link>
         </div>
 
-        {!dataReady || matchLoading ? (
+        {!dataReady ? (
           <div className="flex items-center justify-center py-16 gap-2 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
-            <span className="text-sm">Finding your best matches...</span>
+            <span className="text-sm">Loading gigs...</span>
           </div>
         ) : topMatches.length === 0 ? (
           <Card className="border-border border-dashed">
