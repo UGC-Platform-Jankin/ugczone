@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,8 +18,11 @@ const BrandCampaignDetail = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [campaign, setCampaign] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const specificCreatorId = searchParams.get("creator");
 
   const currentTab = location.pathname.endsWith("/posted") ? "posted"
     : location.pathname.endsWith("/schedule") ? "schedule"
@@ -100,7 +103,7 @@ const BrandCampaignDetail = () => {
         </TabsContent>
         <TabsContent value="private">
           <div className="h-[580px]">
-            <CampaignChat campaignId={campaignId!} roomType="private" isBrandView />
+            <CampaignChat campaignId={campaignId!} roomType="private" isBrandView specificCreatorId={specificCreatorId} />
           </div>
         </TabsContent>
         <TabsContent value="settings">

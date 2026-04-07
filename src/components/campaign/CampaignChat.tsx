@@ -13,6 +13,7 @@ interface Props {
   campaignId: string;
   roomType: "group" | "private";
   isBrandView?: boolean;
+  specificCreatorId?: string | null;
 }
 
 interface Message {
@@ -62,7 +63,7 @@ const VoiceMessage = ({ url, isMe }: { url: string; isMe: boolean }) => {
   );
 };
 
-const CampaignChat = ({ campaignId, roomType, isBrandView = false }: Props) => {
+const CampaignChat = ({ campaignId, roomType, isBrandView = false, specificCreatorId = null }: Props) => {
   const { user } = useAuth();
   const [room, setRoom] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -82,7 +83,7 @@ const CampaignChat = ({ campaignId, roomType, isBrandView = false }: Props) => {
   useEffect(() => {
     if (!user || !campaignId) return;
     loadRoom();
-  }, [user, campaignId, roomType]);
+  }, [user, campaignId, roomType, specificCreatorId]);
 
   const loadRoom = async () => {
     setLoading(true);
@@ -131,7 +132,9 @@ const CampaignChat = ({ campaignId, roomType, isBrandView = false }: Props) => {
 
       // Find the other user's ID (the conversation partner)
       let otherUserId: string | null = null;
-      if (user.id === camp.brand_user_id) {
+      if (specificCreatorId) {
+        otherUserId = specificCreatorId;
+      } else if (user.id === camp.brand_user_id) {
         // Brand viewing: pick first accepted creator
         const { data: apps } = await supabase
           .from("campaign_applications")
