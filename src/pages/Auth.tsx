@@ -22,15 +22,14 @@ const Auth = () => {
   const { user, accountType } = useAuth();
 
   useEffect(() => {
-    if (!user) { navigate("/auth"); return; }
-    // Guard: wait for accountType to be resolved before redirecting
-    if (accountType === null) return;
+    if (!user) return;
+    // Immediately redirect logged-in users to their portal
     if (accountType === "creator") {
       navigate("/dashboard");
-    } else {
-      // Non-creator goes to brand — but only if they have a brand profile
+    } else if (accountType === "brand") {
       navigate("/brand/dashboard");
     }
+    // accountType === null: wait for it to resolve
   }, [user, accountType, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {

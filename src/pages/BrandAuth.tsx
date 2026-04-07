@@ -20,12 +20,12 @@ const BrandAuth = () => {
   const { user, accountType } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      if (accountType === "brand") {
-        navigate("/brand/dashboard");
-      } else {
-        navigate("/brand/auth");
-      }
+    if (!user) return;
+    if (accountType === null) return; // wait for accountType to resolve
+    if (accountType === "brand") {
+      navigate("/brand/dashboard");
+    } else {
+      navigate("/auth"); // creator or unknown — send to creator portal
     }
   }, [user, accountType, navigate]);
 
