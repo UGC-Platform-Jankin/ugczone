@@ -12,6 +12,7 @@ import AllCreators from "@/components/campaign/AllCreators";
 import CreatorFinances from "@/components/campaign/CreatorPricingSpreadsheet";
 import BrandVideos from "@/components/campaign/BrandVideos";
 import CampaignChat from "@/components/campaign/CampaignChat";
+import PrivateChatPanel from "@/components/campaign/PrivateChatPanel";
 import CampaignApplications from "@/components/campaign/CampaignApplications";
 
 const BrandCampaignDetail = () => {
@@ -108,9 +109,7 @@ const BrandCampaignDetail = () => {
           </div>
         </TabsContent>
         <TabsContent value="private">
-          <div className="h-[580px]">
-            <CampaignChat campaignId={campaignId!} roomType="private" isBrandView otherUserId={specificCreatorId} />
-          </div>
+          <PrivateChatPanel campaignId={campaignId!} isBrandView />
         </TabsContent>
         <TabsContent value="settings">
           <CampaignSettings campaignId={campaignId!} />

@@ -9,6 +9,7 @@ import CreatorPostedForGig from "@/components/campaign/CreatorPostedVideos";
 import PostingSchedule from "@/components/campaign/PostingSchedule";
 import CreatorResources from "@/components/campaign/CreatorResources";
 import CampaignChat from "@/components/campaign/CampaignChat";
+import PrivateChatPanel from "@/components/campaign/PrivateChatPanel";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -164,9 +165,7 @@ const CreatorGigDetail = () => {
           </div>
         </TabsContent>
         <TabsContent value="private">
-          <div className="h-[580px]">
-            <CampaignChat campaignId={campaignId!} roomType="private" otherUserId={(campaign as any)?.brand_user_id} />
-          </div>
+          <PrivateChatPanel campaignId={campaignId!} />
         </TabsContent>
       </Tabs>
 
