@@ -300,7 +300,11 @@ const CampaignChat = ({ campaignId, roomType, isBrandView = false, otherUserId =
           <AvatarFallback className="bg-primary/10 text-primary text-sm">{(room.name || "G")[0]?.toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm text-foreground">{room.name || (roomType === "group" ? "Group Chat" : "Chat")}</p>
+          <p className="font-medium text-sm text-foreground">{
+            roomType === "private" && otherUserId && participants[otherUserId]
+              ? (participants[otherUserId].business_name || participants[otherUserId].display_name || room.name || "Chat")
+              : (room.name || (roomType === "group" ? "Group Chat" : "Chat"))
+          }</p>
           <p className="text-xs text-muted-foreground">{roomType === "group" ? `${Object.keys(participants).length} members` : "Direct message"}</p>
         </div>
         {roomType === "group" && (
