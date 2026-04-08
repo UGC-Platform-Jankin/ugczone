@@ -126,7 +126,7 @@ const FindCreators = () => {
   }, [user]);
 
   const matchItems = creators.map(c => ({
-    user_id: c.user_id, display_name: c.display_name, bio: c.bio,
+    id: c.user_id, user_id: c.user_id, display_name: c.display_name, bio: c.bio,
     platforms: c.socials.map(s => s.platform),
     followers: c.socials.reduce((sum, s) => sum + (s.followers_count || 0), 0),
     past_collabs: (c as any).past_collabs || [],
