@@ -21,16 +21,19 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const { user, accountType, signOut } = useAuth();
 
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
+
   // Redirect when user logs in and accountType is resolved
   useEffect(() => {
     if (!user || accountType === null) return;
-    // If a brand user lands here, sign them out so they can use the creator portal
+    if (justLoggedIn) return;
+    // If a brand user is already logged in and navigates here, sign them out
     if (accountType === "brand") {
       signOut();
       return;
     }
     navigate("/dashboard", { replace: true });
-  }, [user, accountType, navigate, signOut]);
+  }, [user, accountType, navigate, signOut, justLoggedIn]);
 
   const handleSignOut = async () => {
     await signOut();

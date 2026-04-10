@@ -19,16 +19,19 @@ const BrandAuth = () => {
   const [searchParams] = useSearchParams();
   const { user, accountType, signOut } = useAuth();
 
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
+
   useEffect(() => {
-    if (!user) return;
-    if (accountType === null) return;
-    // If a creator lands here, sign them out so they can use the brand portal
+    if (!user || accountType === null) return;
+    // If user just logged in via this page's form, handle redirect
+    if (justLoggedIn) return;
+    // If a creator is already logged in and navigates here, sign them out
     if (accountType === "creator") {
       signOut();
       return;
     }
     navigate("/brand/dashboard");
-  }, [user, accountType, navigate, signOut]);
+  }, [user, accountType, navigate, signOut, justLoggedIn]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
