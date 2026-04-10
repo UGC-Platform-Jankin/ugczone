@@ -305,9 +305,12 @@ Your terms for "${campaign?.title}" have been updated:
                       {campaign?.is_free_product ? (
                         <span className="text-xs text-muted-foreground">—</span>
                       ) : (
-                        <div className="flex items-center gap-1 justify-center">
-                          <Button size="sm" variant="ghost" className="h-7 w-7 px-0" onClick={() => startEdit(app.id, "price", app.agreed_price_per_video)}>
-                            <Pencil className="h-3 w-3" />
+                        <div className="flex items-center gap-2 justify-center">
+                          <Button size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs" onClick={() => startEdit(app.id, "price", app.agreed_price_per_video)}>
+                            <DollarSign className="h-3 w-3" /> Price
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs" onClick={() => startEdit(app.id, "videos", app.agreed_video_count)}>
+                            <Video className="h-3 w-3" /> Videos
                           </Button>
                         </div>
                       )}
