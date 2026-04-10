@@ -36,21 +36,23 @@ const BrandAuth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setJustLoggedIn(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast({ title: "Login failed", description: error.message, variant: "destructive" });
+      setJustLoggedIn(false);
       setLoading(false);
       return;
     }
-    // Check account type from metadata — creators should use creator portal
     if (data.user) {
       const metaType = data.user.user_metadata?.account_type;
       if (metaType === "creator") {
+        toast({ title: "Wrong portal", description: "This is a creator account. Redirecting to creator login.", variant: "destructive" });
+        await signOut();
         navigate("/auth", { replace: true });
         setLoading(false);
         return;
       }
-      // Check if a brand profile exists
       const { data: bp } = await supabase.from("brand_profiles").select("id").eq("user_id", data.user.id).maybeSingle();
       if (!bp) {
         navigate("/brand/setup", { replace: true });

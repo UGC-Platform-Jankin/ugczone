@@ -43,21 +43,24 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setJustLoggedIn(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast({ title: "Login failed", description: error.message, variant: "destructive" });
+      setJustLoggedIn(false);
       setLoading(false);
       return;
     }
-    // Redirect immediately based on account type
     if (data.user) {
       const metaType = data.user.user_metadata?.account_type;
-      if (metaType === "creator") {
-        navigate("/dashboard", { replace: true });
-      } else if (metaType === "brand") {
-        navigate("/brand/dashboard", { replace: true });
+      if (metaType === "brand") {
+        toast({ title: "Wrong portal", description: "This is a brand account. Redirecting to brand login.", variant: "destructive" });
+        await signOut();
+        navigate("/brand/auth", { replace: true });
+        setLoading(false);
+        return;
       }
-      // If no metadata, AuthContext will handle redirect when it resolves
+      navigate("/dashboard", { replace: true });
     }
     setLoading(false);
   };
