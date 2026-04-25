@@ -68,11 +68,7 @@ const Hero = () => {
                 transition={{ delay: 0.3 }}
                 className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-1.5 text-sm text-muted-foreground"
               >
-                <motion.span
-                  animate={{ scale: [1, 1.3, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="h-2 w-2 rounded-full bg-gradient-coral"
-                />
+                <span className="h-2 w-2 rounded-full bg-gradient-coral" />
                 Launching in Hong Kong & London
               </motion.div>
 
